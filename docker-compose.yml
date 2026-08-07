@@ -1,0 +1,68 @@
+# KazMorph — запуск: docker compose up -d --build
+# Сервис kazmorph слушает порт 8080 внутри контейнера; внешний порт задаётся через PORT.
+# БД (PostgreSQL) поднимается как отдельный сервис с персистентным volume.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: kazmorph-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kazmorph}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kazmorph}
+      POSTGRES_DB: ${POSTGRES_DB:-kazmorph}
+    volumes:
+      # Персистентное хранилище данных (запросы, аккаунты).
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kazmorph}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  kazmorph:
+    build: .
+    image: kazmorph:2026
+    container_name: kazmorph
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      # Число воркеров uvicorn (≈ число ядер сервера). Сессии в подписанных
+      # cookies, поэтому multi-worker безопасен.
+      WORKERS: ${WORKERS:-4}
+      # БД: сервис db по имени сети compose. psycopg2 — дефолтный драйвер.
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-kazmorph}:${POSTGRES_PASSWORD:-kazmorph}@db:5432/${POSTGRES_DB:-kazmorph}"
+      # Секрет подписи сессионных cookies. ОБЯЗАТЕЛЬНО сменить в продакшене (.env).
+      SESSION_SECRET: ${SESSION_SECRET:-dev-insecure-change-me}
+      # Включать флаг Secure у cookie только за HTTPS (продакшен за nginx).
+      SESSION_SECURE: ${SESSION_SECURE:-}
+      # Закрыть /api/v1/* ключом (пусто = открытый API, публичный инструмент).
+      KAZMORPH_API_KEY: ${KAZMORPH_API_KEY:-}
+      # ─── Active Learning (LLM-ревьюер + RSS-харвестер) ─────────────
+      # Ключ Anthropic для LLM-ревьюера (pay-per-token, НЕ Coding Plan).
+      # Берётся из корневого .env (который в .gitignore).
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-claude}
+      LLM_REVIEW_MODEL: ${LLM_REVIEW_MODEL:-claude-haiku-4-5}
+      RAW_TEXT_RETENTION_DAYS: ${RAW_TEXT_RETENTION_DAYS:-7}
+    volumes:
+      # Модели в репозитории нет (gitignored) — кладём их в ./models/ на сервере.
+      # Файлы: models/crf_model.joblib, models/neural_pos/.
+      # Без них система работает в режиме RMA + MFRN (CRF/Neural отключены).
+      - ./models:/app/models:ro
+      # Данные Active Learning: собранные статьи (data/raw_news), кандидаты
+      # (data/candidates), логи LLM-запусков (data/llm_runs). Монтируем RW,
+      # чтобы скрипты внутри контейнера могли писать (harvest/llm_review/retrain).
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/api/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  pgdata:

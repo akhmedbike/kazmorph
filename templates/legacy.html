@@ -1,0 +1,113 @@
+{#
+  Legacy two-panel analyzer UI (route /legacy).
+  Kept for reference / fallback; the dashboard at / is the default.
+  Body markup is unchanged from the original index.html — only wrapped in
+  base.html + the shared chrome macros so it inherits the Airbnb theme.
+#}
+{% extends "base.html" %}
+{% from "components/ui.html" import button %}
+
+{% block title %}KazMorphCorpus-2026 (legacy){% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/app.css?v=3">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="grid">
+        <!-- Input -->
+        <div class="panel">
+            <div class="panel-header">
+                <span data-i18n="input_title"></span>
+                <span id="charCount" style="font-weight:400; color:var(--text-muted); font-size:0.8rem;">{{ default_text|length }} таңба</span>
+            </div>
+            <div class="panel-body">
+                <textarea id="input" data-i18n-placeholder="input_placeholder">{{ default_text }}</textarea>
+                <div class="btn-row">
+                    <button class="btn-primary" id="analyzeBtn" data-i18n="btn_analyze"></button>
+                    <button class="btn-secondary" onclick="clearAll()" data-i18n="btn_clear"></button>
+                    <button class="btn-secondary" onclick="loadSample()" data-i18n="btn_sample"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result -->
+        <div class="panel">
+            <div class="panel-header">
+                <span data-i18n="result_title"></span>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-bor)"></div>BOR</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-afc)"></div>AFC</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-seg)"></div>SEG</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-agr)"></div>AGR</div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="highlighted-text" id="highlighted">
+                    <span class="placeholder" data-i18n="result_placeholder"></span>
+                </div>
+                <div class="stats" id="stats" style="display:none;">
+                    <div class="stat-card stat-card-bor">
+                        <div class="num" id="stat-bor">0</div>
+                        <div class="label" data-i18n="stat_bor"></div>
+                    </div>
+                    <div class="stat-card stat-card-afc">
+                        <div class="num" id="stat-afc">0</div>
+                        <div class="label" data-i18n="stat_afc"></div>
+                    </div>
+                    <div class="stat-card stat-card-seg">
+                        <div class="num" id="stat-seg">0</div>
+                        <div class="label" data-i18n="stat_seg"></div>
+                    </div>
+                    <div class="stat-card stat-card-agr">
+                        <div class="num" id="stat-agr">0</div>
+                        <div class="label" data-i18n="stat_agr"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="panel full-width">
+            <div class="panel-header">
+                <span data-i18n="table_title"></span>
+                <span style="font-weight:400; color:var(--text-muted); font-size:0.8rem;" id="tokenCount"></span>
+            </div>
+            <div class="panel-body" style="padding:0; overflow-x:auto;">
+                <table class="results-table" id="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th data-i18n="col_word"></th>
+                            <th data-i18n="col_lemma"></th>
+                            <th data-i18n="col_pos"></th>
+                            <th data-i18n="col_confidence"></th>
+                            <th data-i18n="col_suffixes"></th>
+                            <th data-i18n="col_class"></th>
+                            <th data-i18n="col_suggestions"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Side sheet: sample texts + token detail -->
+<div class="sheet-overlay" id="sheetOverlay"></div>
+<div class="sheet" id="sheet">
+    <div class="sheet-header">
+        <span id="sheetTitle" data-i18n="sheet_title"></span>
+        <button class="sheet-close" id="sheetClose">&times;</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+<script src="/static/js/app.js?v=8"></script>
+{% endblock %}

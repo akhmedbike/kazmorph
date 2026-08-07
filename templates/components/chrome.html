@@ -1,0 +1,155 @@
+{#
+  Reusable page chrome: header + footer.
+  Usage:  {% from "components/chrome.html" import header, footer %}
+          {{ header(stages=stages, neural_active=neural_active, current_user=current_user) }}
+          {{ footer() }}
+
+  `stages`         list[str] of active pipeline stages (RMA / CRF / Neural / MFRN).
+  `neural_active`  whether the Neural badge renders as active.
+  `current_user`   User | None — if set, shows the account menu (dashboard/logout);
+                   otherwise a "Login" link. Optional for backwards compat.
+#}
+{% from "components/ui.html" import stat_card %}
+
+{% macro header(stages=[], neural_active=False, current_user=None) %}
+<div class="header">
+    <div class="header-inner">
+        <a href="/" class="brand">Kaz<span>Morph</span>Corpus-2026</a>
+        <div class="header-right">
+            <div class="lang-switcher">
+                <button class="lang-btn {% if lang == 'kk' %}active{% endif %}" data-lang="kk">KK</button>
+                <button class="lang-btn {% if lang == 'ru' %}active{% endif %}" data-lang="ru">RU</button>
+                <button class="lang-btn {% if lang == 'en' %}active{% endif %}" data-lang="en">EN</button>
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="Toggle theme">&#9790;</button>
+            <div class="header-status" id="stages">
+                {# Server-rendered active stages; JS (sidebar.js loadHealth) fills these
+                   on pages whose context omits stages (e.g. /dashboard, /login). #}
+                {% for stage in stages %}
+                <span class="stage-badge">{{ stage }}</span>
+                {% endfor %}
+                {% if not neural_active %}
+                <span class="stage-badge inactive">Neural</span>
+                {% endif %}
+            </div>
+            {# Account menu: depends on authentication state. #}
+            <div class="header-account">
+                {% if current_user %}
+                <a href="/dashboard" class="account-chip" title="{{ current_user.email }}">
+                    <span class="account-avatar">{{ current_user.email[0]|upper }}</span>
+                    <span class="account-name">{{ current_user.email }}</span>
+                </a>
+                <form method="post" action="/logout" class="account-form">
+                    <button type="submit" class="btn btn-secondary btn-sm" data-i18n="nav_logout"></button>
+                </form>
+                {% else %}
+                <a href="/login" class="btn btn-secondary btn-sm" data-i18n="nav_login"></a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+
+{% macro footer() %}
+<div class="footer">
+    <div class="footer-inner">
+        <span data-i18n="footer_note"></span>
+        <div class="footer-links">
+            <a href="/api-docs" data-i18n="footer_docs"></a>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   Sidebar macros — the dashboard app shell.
+   Usage from base.html's {% block shell %}.
+   ========================================================================== #}
+
+{# Resolve "active" section from the request path so nav items highlight. #}
+{%- macro _is_active(path) -%}
+{%- if request -%}{{ 'active' if request.url.path == path else '' }}{%- endif -%}
+{%- endmacro -%}
+
+{# Left sidebar: account block + primary navigation + (optional) user stats.
+   current_user: User | None, is_authenticated: bool. #}
+{% macro sidebar_left(current_user=None, is_authenticated=False) %}
+<aside class="sidebar sidebar-left">
+    {# ── Account ──────────────────────────────────────────────── #}
+    <section class="sb-section sb-account">
+        {% if current_user %}
+        <div class="sb-user">
+            <span class="account-avatar">{{ current_user.email[0]|upper }}</span>
+            <span class="sb-user-email">{{ current_user.email }}</span>
+        </div>
+        <div class="sb-account-actions">
+            <a href="/dashboard" class="btn btn-secondary btn-sm btn-block" data-i18n="nav_account"></a>
+            <form method="post" action="/logout" class="account-form">
+                <button type="submit" class="btn btn-secondary btn-sm btn-block" data-i18n="nav_logout"></button>
+            </form>
+        </div>
+        {# User stats — same stat_card component as the dashboard KPI row,
+           rendered in the compact grid. Filled client-side by sidebar.js
+           (hidden until loaded). #}
+        <div class="stat-grid-sm" id="sbStats" hidden>
+            {{ stat_card(value_id="sbTotalQueries", label_key="sb_total_queries") }}
+            {{ stat_card(value_id="sbTotalTokens", label_key="sb_total_tokens") }}
+        </div>
+        {% else %}
+        <p class="sb-guest-prompt" data-i18n="sb_guest_prompt"></p>
+        <div class="sb-account-actions">
+            <a href="/login" class="btn btn-primary btn-sm btn-block" data-i18n="nav_login"></a>
+            <a href="/register" class="btn btn-secondary btn-sm btn-block" data-i18n="nav_register"></a>
+        </div>
+        {% endif %}
+    </section>
+
+    {# ── Navigation ───────────────────────────────────────────── #}
+    <nav class="sb-section sb-nav">
+        <h3 class="sb-section-title" data-i18n="sb_navigation"></h3>
+        <a href="/" class="sb-nav-item {{ _is_active('/') }}" data-i18n="nav_dashboard"></a>
+        {% if is_authenticated %}<a href="/dashboard" class="sb-nav-item {{ _is_active('/dashboard') }}" data-i18n="nav_account"></a>{% endif %}
+        {# Admin link — only visible to admins (Active Learning review). #}
+        {% if current_user and current_user.is_admin %}<a href="/admin" class="sb-nav-item {{ _is_active('/admin') }}" data-i18n="nav_admin"></a>{% endif %}
+        <a href="/api-docs" class="sb-nav-item {{ _is_active('/api-docs') }}" data-i18n="footer_docs"></a>
+    </nav>
+</aside>
+{% endmacro %}
+
+
+{# Right sidebar: legend + how-to + pipeline stages.
+   Static reference content shown on analysis-bearing pages. #}
+{% macro sidebar_right() %}
+<aside class="sidebar sidebar-right">
+    {# ── Difficulty-class legend ──────────────────────────────── #}
+    <section class="sb-card">
+        <h3 class="sb-card-title" data-i18n="sb_legend"></h3>
+        <ul class="sb-legend">
+            <li><span class="legend-dot bor"></span><span class="sb-legend-code">BOR</span><span class="sb-legend-desc" data-i18n="desc_bor"></span></li>
+            <li><span class="legend-dot afc"></span><span class="sb-legend-code">AFC</span><span class="sb-legend-desc" data-i18n="desc_afc"></span></li>
+            <li><span class="legend-dot seg"></span><span class="sb-legend-code">SEG</span><span class="sb-legend-desc" data-i18n="desc_seg"></span></li>
+            <li><span class="legend-dot agr"></span><span class="sb-legend-code">AGR</span><span class="sb-legend-desc" data-i18n="desc_agr"></span></li>
+        </ul>
+    </section>
+
+    {# ── How to read the result ───────────────────────────────── #}
+    <section class="sb-card">
+        <h3 class="sb-card-title" data-i18n="sb_howto"></h3>
+        <p class="sb-howto-text" data-i18n="sb_howto_text"></p>
+    </section>
+
+    {# ── Pipeline stages ──────────────────────────────────────── #}
+    <section class="sb-card">
+        <h3 class="sb-card-title" data-i18n="sb_pipeline"></h3>
+        <ol class="sb-pipeline">
+            <li><span class="sb-stage-code">RMA</span><span data-i18n="sb_stage_rma"></span></li>
+            <li><span class="sb-stage-code">CRF</span><span data-i18n="sb_stage_crf"></span></li>
+            <li><span class="sb-stage-code">Neural</span><span data-i18n="sb_stage_neural"></span></li>
+            <li><span class="sb-stage-code">MFRN</span><span data-i18n="sb_stage_mfrn"></span></li>
+        </ol>
+    </section>
+</aside>
+{% endmacro %}

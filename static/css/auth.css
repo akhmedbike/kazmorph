@@ -1,0 +1,200 @@
+/* ============================================================
+   auth.css — login / register / account-page-only styles.
+   Depends on base.css design tokens. Page-shell widgets shared with the
+   header/sidebar (.btn-sm, .account-avatar, .account-chip, …) now live in
+   shell.css so every page renders them identically.
+   ============================================================ */
+
+/* ---------- Auth card (login / register) ---------- */
+.auth-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 2rem 2.25rem;
+}
+
+.auth-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.auth-subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.form-hint {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.form-field input {
+    padding: 0.65rem 0.85rem;
+    font-size: 15px;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-field input:focus {
+    border-color: var(--primary);
+}
+
+.auth-submit {
+    margin-top: 0.5rem;
+    width: 100%;
+    padding: 0.7rem;
+    font-size: 15px;
+}
+
+.auth-error {
+    background: var(--tag-bor-bg);
+    color: var(--tag-bor);
+    border: 1px solid var(--tag-bor);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.88rem;
+}
+
+.auth-error-list {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.auth-alt {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.auth-alt a,
+.auth-note a,
+.account-empty a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-alt a:hover {
+    text-decoration: underline;
+}
+
+.auth-note {
+    text-align: center;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* ---------- Account page: request history ----------
+   Width is governed by .main-col in the app shell (no fixed cap). */
+.account-wrap {
+    max-width: none;
+}
+
+.account-panel {
+    margin-top: 1rem;
+}
+
+.account-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+.query-preview {
+    /* No fixed max-width: the preview fills the remaining column width. */
+    color: var(--text);
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.query-date {
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+/* ---------- Pagination ---------- */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem;
+}
+
+.page-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    transition: all 0.15s;
+}
+
+.page-link:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+.page-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .auth-card {
+        padding: 1.5rem 1.25rem;
+    }
+    .query-preview {
+        max-width: 200px;
+    }
+    .pagination {
+        gap: 0.75rem;
+    }
+}

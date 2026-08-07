@@ -1,0 +1,77 @@
+{#
+  Reusable UI primitives for the dashboard / legacy pages.
+  Usage:  {% from "components/ui.html" import button, panel, panel_end, kpi_card, section_title %}
+
+  Macros keep markup DRY and ensure every surface follows DESIGN.md
+  (rounded corners, one shadow tier, Rausch accent on primaries only).
+#}
+
+{# Button.
+   variant: "primary" (Rausch) | "secondary" (white outline) | "ghost" (text only)
+   attrs:   any extra attributes, e.g. 'id="analyzeBtn" disabled'
+   label:   i18n key OR raw text (if label_is_key is false)
+#}
+{% macro button(label, variant="primary", attrs="", label_is_key=true) %}
+<button class="btn btn-{{ variant }}" {{ attrs }}
+    {% if label_is_key %}data-i18n="{{ label }}"{% endif %}>
+    {%- if label_is_key %}{{ label }}
+    {%- else %}{{ label }}{% endif -%}
+</button>
+{% endmacro %}
+
+
+{# Panel with header + body. Pair with panel_end.
+   title:   i18n key for the header, or '' for no header text.
+   extra:   raw HTML appended in the header (e.g. a legend or count).
+   body_id: optional id on the panel-body wrapper.
+#}
+{% macro panel(title="", extra="", body_id="", modifier="") %}
+<div class="panel {{ modifier }}">
+    {% if title or extra %}
+    <div class="panel-header">
+        {% if title %}<span data-i18n="{{ title }}"></span>{% endif %}
+        {{ extra | safe }}
+    </div>
+    {% endif %}
+    <div class="panel-body"{% if body_id %} id="{{ body_id }}"{% endif %}>
+{% endmacro %}
+
+{% macro panel_end() %}
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Stat card — the ONE reusable metric widget.
+   Used by BOTH the dashboard KPI row (large, with accent rail) AND the left
+   sidebar user-stats block (compact). Same DOM, same classes; the container
+   (`.stat-grid-lg` vs `.stat-grid-sm`) controls size & layout.
+
+   value_id:  DOM id so JS fills the number. Omit for static values.
+   value:     static value text (used when value_id is empty).
+   label_key: i18n key for the caption.
+   accent:    bor/afc/seg/agr/none/primary — colors the left rail (large cards).
+#}
+{% macro stat_card(label_key, value_id="", value="—", accent="primary") %}
+<div class="stat-card stat-{{ accent }}">
+    <span class="stat-num"{% if value_id %} id="{{ value_id }}"{% endif %}>{{ value }}</span>
+    <span class="stat-label" data-i18n="{{ label_key }}"></span>
+</div>
+{% endmacro %}
+
+{# Backwards-compatible alias. #}
+{% macro kpi_card(value_id, label_key, accent="primary") %}
+{{ stat_card(value_id=value_id, label_key=label_key, accent=accent) }}
+{% endmacro %}
+
+
+{# Section title (heading row inside the dashboard).
+   title_key: i18n key for the title.
+   hint:      optional raw HTML shown on the right (e.g. token count).
+#}
+{% macro section_title(title_key, hint="") %}
+<div class="section-head">
+    <h2 class="section-title" data-i18n="{{ title_key }}"></h2>
+    {% if hint %}{{ hint | safe }}{% endif %}
+</div>
+{% endmacro %}

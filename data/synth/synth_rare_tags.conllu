@@ -1,0 +1,479 @@
+# sent_id = synth-part-1
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-2
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-3
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-4
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-5
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-6
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-7
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-8
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-9
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-10
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-11
+1	бардым	бардым	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-12
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-13
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-14
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-15
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-16
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-17
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-18
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-19
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-20
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-21
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-22
+1	келдім	келдім	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-23
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-24
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-25
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-26
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-27
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-28
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-29
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-30
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-31
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-32
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-33
+1	көрдім	көрдім	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-34
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-35
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-36
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-37
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-38
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-39
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-40
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-41
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-42
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-43
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-44
+1	айттым	айттым	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-45
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-46
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-47
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-48
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-49
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-50
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-51
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-52
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-53
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-54
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-55
+1	жаздым	жаздым	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-56
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-57
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-58
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-59
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-60
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-61
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-62
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-63
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-64
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-65
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-66
+1	істедім	істедім	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-67
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-68
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-69
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-70
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-71
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-72
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-73
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-74
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-75
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-76
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-77
+1	ұнады	ұнады	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-78
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	ма	ма	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-79
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	ме	ме	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-80
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	ба	ба	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-81
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	бе	бе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-82
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	пе	пе	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-83
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	ау	ау	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-84
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	ше	ше	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-85
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	шы	шы	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-86
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	қой	қой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-87
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	шығар	шығар	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-part-88
+1	тұрды	тұрды	VERB	_	_	_	_	_	_
+2	ғой	ғой	PART	_	_	_	_	_	_
+3	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-89
+1	Жоқ	Жоқ	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-90
+1	Иә	Иә	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-91
+1	Рақмет	Рақмет	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-92
+1	Міне	Міне	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-93
+1	Қане	Қане	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-94
+1	Ай	Ай	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-95
+1	Мейлі	Мейлі	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-96
+1	Оғой	Оғой	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-97
+1	Паһ	Паһ	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_
+
+# sent_id = synth-intj-98
+1	Ә	Ә	INTJ	_	_	_	_	_	_
+2	.	.	PUNCT	_	_	_	_	_	_

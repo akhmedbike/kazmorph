@@ -1,0 +1,102 @@
+{#
+  Saved-query detail (route /dashboard/query/{id}).
+  Renders a past analysis from stored JSON: read-only input, highlighted text,
+  stat cards, and the token table. Uses query_detail.js (pure render functions,
+  no /api/analyze wiring) so the saved result is shown without re-analysis.
+  context: lang, stages, neural_active, current_user, is_authenticated, record
+#}
+{% extends "base.html" %}
+
+{% block title %}Запрос #{{ record.id }} — KazMorphCorpus-2026{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/app.css?v=3">
+<link rel="stylesheet" href="/static/css/auth.css?v=5">
+{% endblock %}
+
+{% block shell_class %}no-right{% endblock %}
+{% block sidebar_right %}{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+{# Saved pipeline result injected as JS globals for the render script. #}
+<script>
+    window.SAVED_RESULT = {{ record.result_json | tojson }};
+    window.SAVED_TEXT = {{ record.input_text | tojson }};
+</script>
+
+<div class="container">
+    <div class="grid">
+        {# Read-only source text #}
+        <div class="panel">
+            <div class="panel-header">
+                <span>Исходный текст</span>
+                <span class="meta-count">{{ record.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+            <div class="panel-body">
+                <textarea id="input" readonly>{{ record.input_text }}</textarea>
+            </div>
+        </div>
+
+        {# Highlighted result #}
+        <div class="panel">
+            <div class="panel-header">
+                <span>Результат анализа</span>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-bor)"></div>BOR</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-afc)"></div>AFC</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-seg)"></div>SEG</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tag-agr)"></div>AGR</div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="highlighted-text" id="highlighted"></div>
+                <div class="stats" id="stats">
+                    <div class="stat-card stat-card-bor"><div class="num" id="stat-bor">0</div><div class="label">BOR</div></div>
+                    <div class="stat-card stat-card-afc"><div class="num" id="stat-afc">0</div><div class="label">AFC</div></div>
+                    <div class="stat-card stat-card-seg"><div class="num" id="stat-seg">0</div><div class="label">SEG</div></div>
+                    <div class="stat-card stat-card-agr"><div class="num" id="stat-agr">0</div><div class="label">AGR</div></div>
+                </div>
+            </div>
+        </div>
+
+        {# Token table #}
+        <div class="panel full-width">
+            <div class="panel-header">
+                <span>Морфологический анализ</span>
+                <span class="meta-count" id="tokenCount"></span>
+            </div>
+            <div class="panel-body panel-body-flush">
+                <div class="table-scroll">
+                    <table class="results-table" id="table">
+                        <thead>
+                            <tr>
+                                <th>#</th><th>Слово</th><th>Лемма</th><th>POS</th>
+                                <th>Достоверность</th><th>Аффиксы</th><th>Класс</th><th>Исправления</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Token detail side sheet (shared shape with the analyzer pages). #}
+<div class="sheet-overlay" id="sheetOverlay"></div>
+<div class="sheet" id="sheet">
+    <div class="sheet-header">
+        <span id="sheetTitle">Подробности токена</span>
+        <button class="sheet-close" id="sheetClose">&times;</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+<script src="/static/js/query_detail.js?v=1"></script>
+{% endblock %}

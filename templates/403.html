@@ -1,0 +1,42 @@
+{#
+  403 Forbidden — shown when a logged-in non-admin tries to reach /admin/*.
+  Rendered by app/auth.py:require_admin for browser (text/html) requests.
+  API requests still get a JSON 403 from the same dependency.
+  context: request, lang, current_user, is_authenticated, is_admin
+#}
+{% extends "base.html" %}
+
+{% block title %}Недостаточно прав — KazMorphCorpus-2026{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/auth.css?v=5">
+{% endblock %}
+
+{# Centered card, no sidebars — same focus state as login/register. #}
+{% block sidebar_right %}{% endblock %}
+{% block sidebar_left %}{% endblock %}
+{% block shell_class %}app-shell-centered{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1 class="auth-title">Недостаточно прав</h1>
+        <p class="auth-subtitle">Этот раздел доступен только администраторам</p>
+
+        <p class="auth-note">
+            Вы вошли как
+            <strong>{{ current_user.email if current_user else 'гость' }}</strong>,
+            но для доступа к административной панели требуются права администратора.
+        </p>
+
+        <a href="/" class="btn btn-primary auth-submit" style="display:inline-block;text-align:center;text-decoration:none">
+            На главную
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+{% endblock %}

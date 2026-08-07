@@ -1,0 +1,69 @@
+# Data & Model Licenses
+
+The **source code** in this repository is licensed under the MIT License (see
+[`LICENSE`](LICENSE)). The **data files and model artifacts**, however, are
+derived from several upstream sources with their own licenses. This file lists
+each source, the files that derive from it, and the license that applies.
+
+When redistributing or producing derived works, you must comply with the
+**most restrictive** license covering the data you use.
+
+---
+
+## 1. Universal Dependencies — UD Kazakh-KTB
+
+- **Source:** https://github.com/UniversalDependencies/UD_Kazakh-KTB
+- **License:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- **Files in this repo (derived):**
+  - `data/train.conllu`, `data/dev.conllu`, `data/test.conllu`
+  - `data/train_split.conllu`, `data/dev_split.conllu`
+  - `data/decontaminated/silver_sentences.conllu` (derived mixes)
+  - `reports/pipeline_output.conllu` (pipeline output over gold sentences)
+- **Obligation:** Attribution + ShareAlike. Derivative datasets must be
+  released under CC BY-SA 4.0 or a compatible license.
+
+## 2. Apertium-kaz
+
+- **Source:** https://github.com/apertium/apertium-kaz
+- **License:** GNU GPL v2 or later (GPLv2+)
+- **Files in this repo (derived):**
+  - `kazmorph/lexicons.py` (auto-generated from `apertium-kaz.kaz.lexc`)
+  - `data/silver_apertium.conllu` (silver UPOS annotations)
+  - `data/silver_lemmas.tsv`, `data/silver_lemmas_merged.tsv` (form→lemma pairs)
+  - `data/decontaminated/silver_apertium.conllu`
+- **Obligation:** Code/data that links to or embeds this material must be
+  distributed under GPLv2+ terms.
+
+## 3. KazBERT — base transformer model
+
+- **Source:** [Eraly-ml/KazBERT](https://huggingface.co/Eraly-ml/KazBERT)
+  (Hugging Face Hub)
+- **License:** See the model card at the URL above for the exact terms.
+- **Note:** The fine-tuned weights produced by this project
+  (`models/neural_pos/model.safetensors`, `models/neural_lemma/model.safetensors`)
+  are derived from KazBERT and are **not** included in this repository due to
+  size (see README → "Large files"). The upstream model card's license governs
+  redistribution of the fine-tuned checkpoints.
+
+## 4. Project-original data (MIT)
+
+Algorithmically generated or project-original artifacts are released under the
+MIT License (same as the source code):
+
+- **Files:**
+  - `data/synth/synth_rare_tags.conllu` (synthetic rare-tag augmentation)
+  - `data/split_meta.json`, `data/decontaminated/decontamination_report.json`
+  - `models/crf_model.joblib`, `models/crf_hyperparams.json`
+  - `models/neural_pos/{config.json,tag_map.json,cv_results.json,calibration.json,fold_metric.json}`
+  - `models/neural_lemma/{config.json,lemma_meta.json}`
+  - `reports/` (metrics, evaluation logs, benchmark JSONs)
+
+---
+
+## Attribution for derived works
+
+If you build a dataset or model using files from **multiple** sources above,
+the result is governed by the most restrictive contributing license. In
+practice this means datasets mixing UD Kazakh-KTB + Apertium-kaz are
+**CC BY-SA 4.0 ∩ GPLv2+** (both copyleft), and must retain attribution for
+both sources.

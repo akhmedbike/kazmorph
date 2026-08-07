@@ -1,0 +1,12 @@
+{
+  "base_model": "Eraly-ml/KazBERT",
+  "folds": 1,
+  "epochs": 12,
+  "folds_completed": 1,
+  "fold_f1": [
+    0.9346025778584157
+  ],
+  "mean_f1": 0.9346025778584157,
+  "std_f1": 0.0,
+  "partial": false
+}

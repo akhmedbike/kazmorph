@@ -1,0 +1,27 @@
+{
+  "test_file": "data/test.conllu",
+  "filter_key": "sentences",
+  "exact_sentence_dedup": true,
+  "test_sentence_count": 162,
+  "test_vocab_sizes": {},
+  "files": [
+    {
+      "file": "data/silver_apertium.conllu",
+      "output": "data/decontaminated/silver_apertium.conllu",
+      "sentences_before": 1092,
+      "removed_exact_duplicates": 127,
+      "removed_vocab_overlap": 0,
+      "sentences_after": 965,
+      "removed_fraction": 0.1163
+    },
+    {
+      "file": "data/silver_sentences.conllu",
+      "output": "data/decontaminated/silver_sentences.conllu",
+      "sentences_before": 866,
+      "removed_exact_duplicates": 0,
+      "removed_vocab_overlap": 0,
+      "sentences_after": 866,
+      "removed_fraction": 0.0
+    }
+  ]
+}

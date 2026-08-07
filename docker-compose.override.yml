@@ -1,0 +1,42 @@
+# Dev-only overrides — автоматически применяется ПРИ ЛОКАЛЬНОМ `docker compose up`.
+# НЕ используется в продакшене (там поднимают только docker-compose.yml).
+#
+# Что делает:
+#   1. Bind-mount исходников из хоста в контейнер — правите файл, контейнер видит сразу.
+#   2. uvicorn --reload — при изменении .py файлов сервер перезапускается сам (~1 сек).
+#   3. 1 воркер (--reload + multi-worker конфликтуют).
+#
+# Использование:
+#   docker compose up          # при правках .py → авто-перезапуск uvicorn
+#                              # при правке templates/static/css/js → просто обновите страницу в браузере
+#   docker compose down        # остановить (данные БД сохранятся в volume)
+#
+# Примечание: блок `develop.watch` намеренно убран — он вызывает ошибку валидации
+# при merge над обычным compose-файлом в этой версии Compose, а bind-mount +
+# --reload полностью покрывают hot-reload для локальной разработки.
+
+services:
+  kazmorph:
+    environment:
+      # 1 воркер: --reload + multi-worker конфликтуют.
+      WORKERS: 1
+      # Подробные логи в дев-режиме.
+      UVICORN_LOG_LEVEL: info
+    volumes:
+      # !important: директива volumes в override ПОЛНОСТЬЮ заменяет volumes из
+      # базового файла для этого сервиса, поэтому models переподключаем здесь же.
+      - ./models:/app/models:ro
+      # Монтируем ВСЕ исходники хоста поверх копии в образе → мгновенные правки.
+      - ./main.py:/app/main.py
+      - ./app:/app/app
+      - ./kazmorph:/app/kazmorph
+      - ./templates:/app/templates
+      - ./static:/app/static
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - ./requirements.txt:/app/requirements.txt:ro
+    # Переопределяем команду: --reload вместо N воркеров.
+    # Миграции запускаем при старте (идемпотентно — alembic пропустит уже применённые).
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn main:app --host 0.0.0.0 --port 8080 --reload --workers 1"

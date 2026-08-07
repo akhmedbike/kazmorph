@@ -1,0 +1,158 @@
+{#
+  Review queue (route /admin/review): LLM suggestions awaiting human decision.
+  One row per annotation. Token highlighted in sentence. Three actions:
+    ✅ Approve (final = LLM version)
+    ✏️ Edit   (inline form → human override)
+    ❌ Reject (neither pipeline nor LLM is right)
+  Verdict colour coding: incorrect=red, uncertain=yellow, correct=green.
+  context: annotations, status, page, pages, total, statuses, focus_id?
+#}
+{% extends "base.html" %}
+
+{% block title %}Ревью — Active Learning — KazMorphCorpus-2026{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/admin.css?v=1">
+{% endblock %}
+
+{% block shell_class %}no-right{% endblock %}
+{% block sidebar_right %}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% macro highlight_token(sentence, token) %}
+{#- Подсветить токен в предложении (case-insensitive, первое совпадение). -#}
+{% set lower_tok = token|lower %}
+{% set lower_sent = sentence|lower %}
+{% if lower_tok in lower_sent %}
+    {{ sentence[:lower_sent.index(lower_tok)] }}<mark class="hl-token">{{ sentence[lower_sent.index(lower_tok):lower_sent.index(lower_tok) + token|length] }}</mark>{{ sentence[lower_sent.index(lower_tok) + token|length:] }}
+{% else %}
+    {{ sentence }}
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="container admin-wrap">
+    <div class="admin-header">
+        <h1>Ревью предложений</h1>
+        <div class="review-filters">
+            {% for s in statuses %}
+            <a href="/admin/review?status={{ s }}" class="filter-chip {% if status == s %}active{% endif %}">
+                {{ s }}
+            </a>
+            {% endfor %}
+            <a href="/admin/review?status=all" class="filter-chip {% if status == 'all' %}active{% endif %}">все</a>
+            <span class="meta-count">Всего: {{ total }}</span>
+        </div>
+    </div>
+
+    {% if annotations %}
+    <div class="review-list">
+        {% for a in annotations %}
+        <div class="review-card {% if focus_id is defined and focus_id == a.id %}focused{% endif %}"
+             id="ann-{{ a.id }}">
+            <div class="review-card-header">
+                <span class="ann-id">#{{ a.id }}</span>
+                <span class="verdict-badge verdict-{{ a.llm_verdict }}">{{ a.llm_verdict }}</span>
+                <span class="diff-badge diff-{{ a.difficulty_class|lower }}">{{ a.difficulty_class }}</span>
+                <span class="conf-badge">conf {{ (a.pipeline_confidence * 100)|round(0) }}%</span>
+                {% if a.status != 'pending' %}
+                <span class="status-badge status-{{ a.status }}">{{ a.status }}</span>
+                {% endif %}
+            </div>
+
+            <div class="review-sentence">{{ highlight_token(a.sentence, a.token) }}</div>
+
+            <div class="review-comparison">
+                <div class="compare-col pipeline-col">
+                    <div class="compare-label">Разбор пайплайна</div>
+                    <div class="compare-value">
+                        <span class="pos-tag">{{ a.pipeline_pos }}</span>
+                        <span class="lemma">{{ a.pipeline_lemma }}</span>
+                    </div>
+                </div>
+                {% if a.llm_verdict == 'incorrect' %}
+                <div class="compare-arrow">→</div>
+                <div class="compare-col llm-col">
+                    <div class="compare-label">Предложение LLM</div>
+                    <div class="compare-value">
+                        <span class="pos-tag">{{ a.llm_pos }}</span>
+                        <span class="lemma">{{ a.llm_lemma }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if a.llm_explanation %}
+            <div class="review-explanation">{{ a.llm_explanation }}</div>
+            {% endif %}
+
+            {% if a.source_url %}
+            <div class="review-source">
+                <a href="{{ a.source_url }}" target="_blank" rel="noopener">источник ↗</a>
+            </div>
+            {% endif %}
+
+            {% if a.status == 'pending' %}
+            <div class="review-actions" data-annotation-id="{{ a.id }}">
+                <button class="btn btn-approve" onclick="adminReview.decide({{ a.id }}, 'approved')">
+                    ✅ Одобрить
+                </button>
+                <button class="btn btn-edit" onclick="adminReview.toggleEdit({{ a.id }})">
+                    ✏️ Править
+                </button>
+                <button class="btn btn-reject" onclick="adminReview.decide({{ a.id }}, 'rejected')">
+                    ❌ Отклонить
+                </button>
+            </div>
+            <div class="edit-form" id="edit-form-{{ a.id }}" style="display:none;">
+                <input type="text" id="edit-lemma-{{ a.id }}" placeholder="лемма"
+                       value="{{ a.llm_lemma or a.pipeline_lemma }}" class="edit-input">
+                <input type="text" id="edit-pos-{{ a.id }}" placeholder="POS (NOUN/VERB/...)"
+                       value="{{ a.llm_pos or a.pipeline_pos }}" class="edit-input edit-pos">
+                <button class="btn btn-primary" onclick="adminReview.submitEdit({{ a.id }})">Сохранить</button>
+                <button class="btn btn-secondary" onclick="adminReview.toggleEdit({{ a.id }})">Отмена</button>
+            </div>
+            {% else %}
+            <div class="review-final">
+                Итог:
+                <span class="pos-tag">{{ a.final_pos or '—' }}</span>
+                <span class="lemma">{{ a.final_lemma or '—' }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {# Pagination #}
+    {% if pages is defined and pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/admin/review?status={{ status }}&page={{ page - 1 }}" class="page-link">← Назад</a>
+        {% endif %}
+        <span class="page-info">Стр. {{ page }} из {{ pages }}</span>
+        {% if page < pages %}
+        <a href="/admin/review?status={{ status }}&page={{ page + 1 }}" class="page-link">Вперёд →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="review-empty">
+        {% if status == 'pending' %}
+        <p>Нет кандидатов на ревью.</p>
+        <p>Запустите пайплайн:
+            <code>python scripts/harvest_sources.py && python scripts/select_candidates.py && python scripts/llm_review.py</code>
+        </p>
+        {% else %}
+        <p>Нет аннотаций со статусом «{{ status }}».</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+<script src="/static/js/admin_review.js?v=1"></script>
+{% endblock %}

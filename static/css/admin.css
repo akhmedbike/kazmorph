@@ -1,0 +1,351 @@
+/* Admin: Active Learning review UI.
+   Reuses design tokens from base.css (--primary, --tag-*, etc.).
+   Scope: /admin/* routes only. */
+
+.admin-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.admin-header {
+    margin-bottom: 24px;
+}
+.admin-header h1 {
+    font-size: 1.6rem;
+    margin: 0 0 6px;
+}
+.admin-subtitle {
+    color: var(--text-muted, #666);
+    font-size: 0.92rem;
+    margin: 0;
+}
+
+/* ── Dashboard: stat cards ──────────────────────────────────────────── */
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+.stat-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 12px;
+    padding: 20px;
+    border-left: 4px solid var(--border, #e5e5e5);
+}
+.stat-card.stat-pending { border-left-color: var(--tag-afc, #d97706); }
+.stat-card.stat-approved { border-left-color: #16a34a; }
+.stat-card.stat-rejected { border-left-color: var(--tag-seg, #dc2626); }
+.stat-card.stat-edited { border-left-color: var(--primary, #ff385c); }
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.stat-label {
+    color: var(--text-muted, #666);
+    font-size: 0.85rem;
+    margin-top: 4px;
+    text-transform: capitalize;
+}
+.stat-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--primary, #ff385c);
+    text-decoration: none;
+}
+
+/* ── Info cards (total, agreement) ──────────────────────────────────── */
+.admin-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.info-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 12px;
+    padding: 18px;
+}
+.info-card h3 {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #888);
+    margin: 0 0 8px;
+}
+.info-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+.info-meta {
+    color: var(--text-muted, #888);
+    font-size: 0.82rem;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.admin-cta {
+    margin-top: 8px;
+}
+
+/* ── Review queue ───────────────────────────────────────────────────── */
+.review-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+.filter-chip {
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border, #ddd);
+    background: var(--card-bg, #fff);
+    color: var(--text-muted, #666);
+    font-size: 0.82rem;
+    text-decoration: none;
+    text-transform: capitalize;
+}
+.filter-chip.active {
+    background: var(--primary, #ff385c);
+    color: #fff;
+    border-color: var(--primary, #ff385c);
+}
+.meta-count {
+    color: var(--text-muted, #888);
+    font-size: 0.85rem;
+    margin-left: auto;
+}
+
+.review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+}
+.review-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+.review-card.focused {
+    border-color: var(--primary, #ff385c);
+    box-shadow: 0 0 0 3px rgba(255, 56, 92, 0.12);
+}
+.review-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+}
+.ann-id {
+    color: var(--text-muted, #999);
+    font-weight: 600;
+}
+.verdict-badge,
+.diff-badge,
+.conf-badge,
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.verdict-incorrect { background: #fef2f2; color: #dc2626; }
+.verdict-uncertain { background: #fffbeb; color: #d97706; }
+.verdict-correct { background: #f0fdf4; color: #16a34a; }
+.diff-bor { background: var(--tag-bor-bg, #fef3c7); color: var(--tag-bor, #92400e); }
+.diff-afc { background: var(--tag-afc-bg, #ffedd5); color: var(--tag-afc, #9a3412); }
+.diff-seg { background: var(--tag-seg-bg, #fee2e2); color: var(--tag-seg, #991b1b); }
+.diff-agr { background: var(--tag-agr-bg, #ede9fe); color: var(--tag-agr, #5b21b6); }
+.diff-none { background: #f3f4f6; color: #6b7280; }
+.conf-badge { background: #f3f4f6; color: #6b7280; }
+.status-approved { background: #f0fdf4; color: #16a34a; }
+.status-rejected { background: #fef2f2; color: #dc2626; }
+.status-edited { background: #eff6ff; color: #2563eb; }
+
+.review-sentence {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    color: var(--text, #222);
+}
+.hl-token {
+    background: rgba(255, 56, 92, 0.18);
+    color: var(--primary, #ff385c);
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.review-comparison {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    border-top: 1px solid var(--border, #f0f0f0);
+    border-bottom: 1px solid var(--border, #f0f0f0);
+    margin-bottom: 10px;
+}
+.compare-col {
+    flex: 1;
+    min-width: 160px;
+}
+.compare-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #999);
+    margin-bottom: 4px;
+}
+.compare-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.pos-tag {
+    background: var(--tag-agr-bg, #ede9fe);
+    color: var(--tag-agr, #5b21b6);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.lemma {
+    font-family: monospace;
+    font-size: 0.95rem;
+}
+.compare-arrow {
+    color: var(--text-muted, #999);
+    font-size: 1.1rem;
+}
+
+.review-explanation {
+    font-size: 0.88rem;
+    color: var(--text-muted, #555);
+    font-style: italic;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+.review-source {
+    font-size: 0.78rem;
+    margin-bottom: 10px;
+}
+.review-source a {
+    color: var(--primary, #ff385c);
+    text-decoration: none;
+}
+
+.review-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+.review-actions button,
+.edit-form button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: background 0.15s;
+}
+.btn-approve { background: #16a34a; color: #fff; }
+.btn-approve:hover { background: #15803d; }
+.btn-reject { background: #dc2626; color: #fff; }
+.btn-reject:hover { background: #b91c1c; }
+.btn-edit { background: var(--card-bg, #fff); color: var(--text, #222); border-color: var(--border, #ddd); }
+.btn-edit:hover { background: #f3f4f6; }
+.btn-primary { background: var(--primary, #ff385c); color: #fff; }
+.btn-secondary { background: var(--card-bg, #fff); color: var(--text, #222); border-color: var(--border, #ddd); }
+
+.edit-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.edit-input {
+    padding: 6px 10px;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: var(--card-bg, #fff);
+    color: var(--text, #222);
+}
+.edit-pos { width: 100px; text-transform: uppercase; }
+
+.review-final {
+    font-size: 0.88rem;
+    color: var(--text-muted, #666);
+    margin-top: 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.review-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted, #888);
+}
+.review-empty code {
+    display: block;
+    margin-top: 12px;
+    background: var(--card-bg, #f9f9f9);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    overflow-x: auto;
+}
+
+/* ── Pagination (shared style with dashboard) ──────────────────────── */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+}
+.page-link {
+    color: var(--primary, #ff385c);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.page-info {
+    color: var(--text-muted, #888);
+    font-size: 0.85rem;
+}
+
+/* ── Dark mode adjustments ──────────────────────────────────────────── */
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .info-card,
+[data-theme="dark"] .review-card {
+    background: var(--card-bg, #1f1f1f);
+    border-color: var(--border, #333);
+}
+[data-theme="dark"] .filter-chip,
+[data-theme="dark"] .btn-edit,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .edit-input {
+    background: var(--card-bg, #1f1f1f);
+    color: var(--text, #eee);
+    border-color: var(--border, #333);
+}
+[data-theme="dark"] .review-empty code {
+    background: #1a1a1a;
+}

@@ -1,0 +1,97 @@
+{#
+  Base skeleton for every page.
+  Extends: nothing. Extended by: index.html (dashboard), legacy.html, docs.html.
+  Blocks:  styles, header, content, footer, scripts.
+  Header/footer render via the chrome macros by default; a page can override
+  the block to inject its own (e.g. docs.html keeps its own header markup).
+#}
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}KazMorphCorpus-2026{% endblock %}</title>
+
+    {# Stylesheet hooks. Pages pick base + shell + one of {app, dashboard, auth}.
+       Child pages call {{ super() }} to inherit base + shell before their own. #}
+    {% block styles %}
+    <link rel="stylesheet" href="/static/css/base.css?v=7">
+    <link rel="stylesheet" href="/static/css/shell.css?v=6">
+    {% endblock %}
+
+    <script>
+        // Apply theme early to prevent flash (runs before body paints).
+        // Default = LIGHT. Dark is opt-in only (user picks it explicitly);
+        // we do NOT auto-follow the OS preference.
+        (function() {
+            if (localStorage.getItem('kazmorph_theme') === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+</head>
+<body{% block body_class %}{% endblock %}>
+
+{# Import shell macros at the top level so they are in scope inside nested
+   {% block %} overrides (Jinja blocks are isolated scopes). #}
+{% from "components/chrome.html" import sidebar_left, sidebar_right %}
+
+{% block header %}
+{% from "components/chrome.html" import header %}
+{{ header(stages=stages|default([]), neural_active=neural_active|default(False), current_user=current_user|default(None)) }}
+{% endblock %}
+
+{# App shell: left sidebar | main content | right sidebar.
+   To hide the right column, a page overrides {% block sidebar_right %}{% endblock %}
+   with empty content (login/register/docs do this for width). #}
+{% block shell %}
+<div class="app-shell {% block shell_class %}{% endblock %}">
+    {% block sidebar_left %}{{ sidebar_left(current_user=current_user|default(None), is_authenticated=is_authenticated|default(False)) }}{% endblock %}
+    <main class="main-col {% block main_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+    {% block sidebar_right %}{{ sidebar_right() }}{% endblock %}
+</div>
+{% endblock %}
+
+{% block footer %}
+{% from "components/chrome.html" import footer %}
+{{ footer() }}
+{% endblock %}
+
+{% block scripts %}{% endblock %}
+
+{# Shared shell JS: fills #stages on pages that don't pass server context
+   (e.g. /dashboard, /login) and loads the logged-in user's stats sidebar.
+   Loaded unconditionally on every page; degrades silently if i18n.js is absent. #}
+<script src="/static/js/sidebar.js?v=1"></script>
+
+{# Theme toggle + OS-theme listener — shared by every page. #}
+<script>
+(function() {
+    var btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    var html = document.documentElement;
+
+    function isDark() { return html.getAttribute('data-theme') === 'dark'; }
+    function updateIcon() { btn.innerHTML = isDark() ? '&#9788;' : '&#9790;'; }
+
+    btn.addEventListener('click', function() {
+        if (isDark()) {
+            html.removeAttribute('data-theme');
+            localStorage.setItem('kazmorph_theme', 'light');
+        } else {
+            html.setAttribute('data-theme', 'dark');
+            localStorage.setItem('kazmorph_theme', 'dark');
+        }
+        updateIcon();
+    });
+
+    updateIcon();
+
+    // Theme is fully manual now (default light). No OS-preference auto-follow.
+})();
+</script>
+
+</body>
+</html>

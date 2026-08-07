@@ -1,0 +1,83 @@
+{#
+  Personal account: request history (route /dashboard).
+  Lists the current user's saved analyses with pagination. Each row links to
+  the full detail view at /dashboard/query/{id}.
+  context: lang, stages, neural_active, current_user, is_authenticated,
+           records, page, pages, total
+#}
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет — KazMorphCorpus-2026{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/app.css?v=3">
+<link rel="stylesheet" href="/static/css/auth.css?v=5">
+{% endblock %}
+
+{% block shell_class %}no-right{% endblock %}
+{% block sidebar_right %}{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+<div class="container account-wrap">
+    <div class="panel account-panel">
+        <div class="panel-header">
+            <span>История запросов</span>
+            <span class="meta-count">Всего: {{ total }}</span>
+        </div>
+        <div class="panel-body panel-body-flush">
+            {% if records %}
+            <div class="table-scroll">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Текст</th>
+                            <th>Токенов</th>
+                            <th>Дата</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in records %}
+                        <tr class="row-clickable" onclick="window.location='/dashboard/query/{{ r.id }}'">
+                            <td>{{ loop.index + (page - 1) * 20 }}</td>
+                            <td class="query-preview">{{ r.input_text[:100] }}{% if r.input_text|length > 100 %}…{% endif %}</td>
+                            <td>{{ r.tokens_count }}</td>
+                            <td class="query-date">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td><span class="suggestion-chip">Открыть →</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# Pagination #}
+            {% if pages > 1 %}
+            <div class="pagination">
+                {% if page > 1 %}
+                    <a href="/dashboard?page={{ page - 1 }}" class="page-link">← Назад</a>
+                {% endif %}
+                <span class="page-info">Стр. {{ page }} из {{ pages }}</span>
+                {% if page < pages %}
+                    <a href="/dashboard?page={{ page + 1 }}" class="page-link">Вперёд →</a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="account-empty">
+                <p>История пуста.</p>
+                <p>Выполните <a href="/">анализ текста</a> — запросы появятся здесь.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+{% endblock %}

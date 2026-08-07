@@ -1,0 +1,800 @@
+/* ============================================================
+   base.css — KazMorph design system (Airbnb-derived, see DESIGN.md)
+   Theme tokens (light + dark) · reset · typography · shared chrome
+   Loaded by EVERY page (dashboard, legacy, docs). Do NOT put page-
+   specific layout here — that belongs in app.css / dashboard.css.
+   ============================================================ */
+
+/* ---------- Theme tokens: light ---------- */
+:root {
+    /* Brand & accent — Rausch is the single voltage. */
+    --primary: #ff385c;
+    --primary-active: #e00b41;
+    --primary-hover: #d8053a;
+    --primary-disabled: #ffd1da;
+    --primary-bg: #fff1f3;
+
+    /* Surfaces — soft grey page floor so the white cards stand out. */
+    --bg: #f7f7f7;
+    --surface: #ffffff;
+    --surface-soft: #f1f1f1;
+    --surface-strong: #ececec;
+    --surface-hover: #f1f1f1;
+    --highlight-bg: #f1f1f1;
+
+    /* Text. */
+    --text: #222222;
+    --text-muted: #6a6a6a;
+
+    /* Hairlines & borders. */
+    --border: #dddddd;
+    --border-light: #ebebeb;
+    --border-strong: #c1c1c1;
+
+    /* Difficulty-class accents (used by tags, tokens, stat/KPI rails). */
+    --tag-bor: #c13515;       --tag-bor-bg: #fdecee;
+    --tag-afc: #b04a00;       --tag-afc-bg: #fff3e6;
+    --tag-seg: #6f42c1;       --tag-seg-bg: #f0ebfa;
+    --tag-agr: #0f7a4d;       --tag-agr-bg: #e6f6ee;
+    --tag-none: #6a6a6a;      --tag-none-bg: #f2f2f2;
+
+    /* Semantic. */
+    --error: #c13515;
+
+    /* The single shadow tier (DESIGN.md "Card hover float"). */
+    --shadow: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.10);
+    --shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.04);
+
+    /* Badge / pill states. */
+    --badge-bg: #e6f6ee;
+    --badge-color: #0f7a4d;
+    --badge-inactive-bg: #f2f2f2;
+    --badge-inactive-color: #929292;
+
+    /* Misc shared. */
+    --table-header-bg: #f7f7f7;
+    --conf-track: #ebebeb;
+    --tooltip-bg: #222222;
+    --spinner-border: #dddddd;
+
+    /* Syntax-highlight (docs). */
+    --hl-key: #0550ae;
+    --hl-string: #0a7d33;
+    --hl-number: #9333ea;
+    --hl-boolean: #c2410c;
+    --hl-comment: #6c757d;
+    --hl-keyword: #6f42c1;
+}
+
+/* ---------- Theme tokens: dark ---------- */
+[data-theme="dark"] {
+    --primary: #ff385c;
+    --primary-active: #ff5470;
+    --primary-hover: #ff5470;
+    --primary-disabled: #5a2230;
+    --primary-bg: #2a1419;
+
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-soft: #1e2130;
+    --surface-strong: #252836;
+    --surface-hover: #252836;
+    --highlight-bg: #15171f;
+
+    --text: #e8e8ea;
+    --text-muted: #9298a8;
+
+    --border: #2d3040;
+    --border-light: #252836;
+    --border-strong: #3a3d50;
+
+    --tag-bor: #ff8a93;   --tag-bor-bg: #2d1a1e;
+    --tag-afc: #ffb060;   --tag-afc-bg: #2d261a;
+    --tag-seg: #b9a0f5;   --tag-seg-bg: #231d36;
+    --tag-agr: #5be08f;   --tag-agr-bg: #1a2d1e;
+    --tag-none: #9298a8;  --tag-none-bg: #252836;
+
+    --error: #ff8a93;
+
+    --shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.3);
+
+    --badge-bg: #1a2d1e;
+    --badge-color: #5be08f;
+    --badge-inactive-bg: #252836;
+    --badge-inactive-color: #555;
+
+    --table-header-bg: #1e2130;
+    --conf-track: #2d3040;
+    --tooltip-bg: #0d0e13;
+    --spinner-border: #3a3d50;
+
+    --hl-key: #79c0ff;
+    --hl-string: #7ee787;
+    --hl-number: #d2a8ff;
+    --hl-boolean: #ffa657;
+    --hl-comment: #8b949e;
+    --hl-keyword: #ff7b72;
+}
+
+/* ---------- Reset ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    overflow-x: hidden;
+}
+
+body {
+    /* Cereal → Circular → system; Inter is the open-source substitute. */
+    font-family: "Airbnb Cereal VF", Circular, "Inter", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Header (shared chrome) ---------- */
+.header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-light);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-inner {
+    /* Full-width header: content spans the whole viewport (app-shell layout),
+       bounded only by horizontal padding. Width capping lives on .main-col. */
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.brand {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    letter-spacing: -0.3px;
+    line-height: 1;                 /* kill baseline drift vs. the colored span */
+    display: inline-flex;
+    align-items: baseline;
+}
+.brand span {
+    color: var(--primary);
+}
+.brand:hover {
+    text-decoration: none;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-status {
+    display: flex;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.stage-badge {
+    padding: 3px 10px;
+    border-radius: 9999px;        /* fully rounded pills */
+    background: var(--badge-bg);
+    color: var(--badge-color);
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+
+.stage-badge.inactive {
+    background: var(--badge-inactive-bg);
+    color: var(--badge-inactive-color);
+}
+
+/* ---------- Language switcher ---------- */
+.lang-switcher {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 9999px;        /* pill */
+    overflow: hidden;
+    padding: 2px;
+    background: var(--surface);
+}
+
+.lang-btn {
+    padding: 3px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.lang-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+.lang-btn.active {
+    background: var(--text);
+    color: var(--bg);
+}
+
+/* ---------- Theme toggle ---------- */
+.theme-toggle {
+    height: 32px;
+    width: 32px;
+    border-radius: 9999px;        /* circular icon button */
+    background: var(--surface-strong);
+    color: var(--text);
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.theme-toggle:hover {
+    border-color: var(--text);
+}
+
+/* ---------- Buttons ---------- */
+button {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;           /* rounded.sm */
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+    font-family: inherit;
+    line-height: 1.25;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
+}
+.btn-primary:active {
+    background: var(--primary-active);
+}
+.btn-primary:disabled {
+    background: var(--primary-disabled);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Secondary / legacy btn-secondary alias (kept so legacy + docs keep working) */
+.btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+    border-color: var(--text);
+}
+
+.btn {
+    border-radius: 9999px;        /* pill buttons in the dashboard */
+    padding: 0.7rem 1.4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    line-height: 1;               /* keep label vertically centered on Cyrillic */
+}
+.btn-primary { /* alias for .btn-primary — same Rausch fill */ }
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 0.7rem 0.5rem;
+}
+.btn-ghost:hover {
+    background: var(--surface-hover);
+    text-decoration: none;
+}
+
+/* ---------- Textarea (shared by dashboard, legacy, docs playground) ---------- */
+textarea {
+    width: 100%;
+    padding: 1rem;
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.8;
+    border: 1px solid var(--border);
+    border-radius: 14px;          /* rounded.md */
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: var(--surface);
+    color: var(--text);
+}
+textarea:focus {
+    border-color: var(--text);
+    box-shadow: 0 0 0 1px var(--text);
+}
+textarea::placeholder {
+    color: var(--text-muted);
+}
+
+/* ---------- Shared text utilities ---------- */
+/* Small muted count/caption: "12 токен", "Всего: 42", timestamps.
+   Used across the dashboard, account, query-detail and docs pages. */
+.meta-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ---------- Stat card (shared component) ----------
+   The single reusable metric widget, rendered by the ui.html stat_card macro.
+   Used by the dashboard KPI row (large) and the sidebar user-stats (compact).
+   The container (.stat-grid-lg / .stat-grid-sm) controls size & layout; the
+   card markup is identical everywhere so visuals stay consistent. */
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;            /* rounded.md */
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+/* Accent left rail — a single touch of color (DESIGN.md: one accent). */
+.stat-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--text-muted);
+}
+.stat-primary::before { background: var(--primary); }
+.stat-conf::before    { background: var(--tag-agr); }
+.stat-afc::before     { background: var(--tag-afc); }
+.stat-bor::before     { background: var(--tag-bor); }
+.stat-seg::before     { background: var(--tag-seg); }
+
+.stat-num {
+    display: block;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+.stat-label {
+    display: block;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Large variant — dashboard KPI row. */
+.stat-grid-lg {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+.stat-grid-lg .stat-card {
+    padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+}
+.stat-grid-lg .stat-num {
+    font-size: 2rem;
+}
+.stat-grid-lg .stat-label {
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+}
+
+/* Small variant — sidebar user stats. */
+.stat-grid-sm {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border-light);
+}
+.stat-grid-sm .stat-card {
+    text-align: center;
+    padding: 0.6rem 0.4rem;
+}
+.stat-grid-sm .stat-card::before { display: none; }   /* compact: no rail */
+.stat-grid-sm .stat-num {
+    font-size: 1.25rem;
+    letter-spacing: -0.5px;
+}
+.stat-grid-sm .stat-label {
+    font-size: 0.68rem;
+    margin-top: 2px;
+}
+
+/* ---------- Tag (shared — difficulty-class + "legacy" badge in docs) ---------- */
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    line-height: 1.4;
+}
+.tag-bor  { background: var(--tag-bor-bg);  color: var(--tag-bor); }
+.tag-afc  { background: var(--tag-afc-bg);  color: var(--tag-afc); }
+.tag-seg  { background: var(--tag-seg-bg);  color: var(--tag-seg); }
+.tag-agr  { background: var(--tag-agr-bg);  color: var(--tag-agr); }
+.tag-none { background: var(--tag-none-bg); color: var(--tag-none); }
+
+/* ---------- Footer (shared) ---------- */
+.footer {
+    border-top: 1px solid var(--border-light);
+    background: var(--surface);
+    margin-top: auto;
+}
+.footer-inner {
+    /* Full-width footer matching the header (app-shell). */
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.footer-links {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.footer-inner a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+    white-space: nowrap;
+    padding: 0.5rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: 9999px;        /* pill */
+    transition: all 0.15s;
+}
+.footer-inner a:hover {
+    border-color: var(--text);
+    text-decoration: none;
+}
+
+/* ---------- Spinner ---------- */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--spinner-border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------- Confidence bar (shared by dashboard + legacy) ---------- */
+.conf-bar {
+    width: 60px;
+    height: 6px;
+    background: var(--conf-track);
+    border-radius: 3px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+    overflow: hidden;
+}
+.conf-fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+/* ---------- Suggestion chip ---------- */
+.suggestion-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--primary-bg);
+    color: var(--primary);
+    margin: 1px 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+}
+.suggestion-chip:hover {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+/* ============================================================
+   Side sheet (samples + token detail) — shared by dashboard + legacy
+   ============================================================ */
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.32);   /* scrim at ~32% */
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+}
+.sheet-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sheet {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 420px;
+    max-width: 90vw;
+    height: 100vh;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    z-index: 201;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+}
+.sheet.open {
+    transform: translateX(0);
+}
+
+.sheet-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-light);
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sheet-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background: transparent;
+    font-size: 20px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+}
+.sheet-close:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem;
+    word-break: break-word;
+}
+
+/* Sample-text cards inside the sheet. */
+.sample-item {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--surface);
+}
+.sample-item:hover {
+    border-color: var(--text);
+    box-shadow: var(--shadow-sm);
+}
+.sample-item .sample-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ---------- Token detail card (in sheet) ---------- */
+.detail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+.detail-token {
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 1rem 0;
+    color: var(--text);
+    border-bottom: 1px solid var(--border-light);
+    word-break: break-word;
+}
+.detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-light);
+}
+.detail-row:last-child {
+    border-bottom: none;
+}
+.detail-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.detail-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    text-align: right;
+    max-width: 65%;
+}
+.detail-pos-tag {
+    background: var(--tag-none-bg);
+    color: var(--text);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.detail-section {
+    border-top: 1px solid var(--border-light);
+    padding-top: 0.75rem;
+}
+.detail-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+.detail-suffixes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.detail-suffix {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: var(--primary-bg);
+    color: var(--primary);
+}
+.detail-desc {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text);
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* ============================================================
+   Shared responsive bits for header / footer / sheet
+   ============================================================ */
+@media (max-width: 900px) {
+    .header-inner {
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .sheet {
+        width: 360px;
+    }
+}
+
+@media (max-width: 768px) {
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
+    }
+    .header {
+        position: static;          /* un-stick so the 3-row header has room */
+        overflow: visible;
+    }
+    .header-inner {
+        padding: 0.5rem 0.75rem;
+        flex-wrap: wrap;
+        gap: 0;
+    }
+    .brand {
+        width: 100%;
+        font-size: 1rem;
+        text-align: center;
+        margin-bottom: 0.4rem;
+    }
+    .header-right {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 0.4rem;
+        gap: 0.5rem;
+    }
+    .header-status {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+    .stage-badge {
+        font-size: 0.65rem;
+        padding: 2px 8px;
+    }
+    .sheet {
+        width: 100vw;
+        max-width: 100vw;
+    }
+    .footer-inner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

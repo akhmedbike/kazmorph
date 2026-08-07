@@ -1,0 +1,65 @@
+{#
+  Registration page. Extends base.html.
+  context: lang, stages, neural_active, current_user, is_authenticated,
+           db_enabled, email, errors
+#}
+{% extends "base.html" %}
+
+{% block title %}Регистрация — KazMorphCorpus-2026{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/auth.css?v=5">
+{% endblock %}
+
+{% block sidebar_right %}{% endblock %}
+
+{# Auth pages render a centered form with NO sidebars (clean focus state). #}
+{% block sidebar_left %}{% endblock %}
+{% block shell_class %}app-shell-centered{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1 class="auth-title">Регистрация</h1>
+        <p class="auth-subtitle">Создайте аккаунт для сохранения истории запросов</p>
+
+        {% if errors %}
+        <div class="auth-error" role="alert">
+            <ul class="auth-error-list">
+                {% if 'email_invalid' in errors %}<li>Некорректный email</li>{% endif %}
+                {% if 'email_taken' in errors %}<li>Этот email уже зарегистрирован</li>{% endif %}
+                {% if 'password_short' in errors %}<li>Пароль должен быть не короче 8 символов</li>{% endif %}
+                {% if 'password_mismatch' in errors %}<li>Пароли не совпадают</li>{% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="post" action="/register" class="auth-form">
+            <label class="form-field">
+                <span class="form-label">Email</span>
+                <input type="email" name="email" value="{{ email or '' }}" required
+                       autocomplete="email" autofocus>
+            </label>
+            <label class="form-field">
+                <span class="form-label">Пароль <span class="form-hint">(минимум 8 символов)</span></span>
+                <input type="password" name="password" required minlength="8"
+                       autocomplete="new-password">
+            </label>
+            <label class="form-field">
+                <span class="form-label">Повторите пароль</span>
+                <input type="password" name="password_confirm" required minlength="8"
+                       autocomplete="new-password">
+            </label>
+            <button type="submit" class="btn btn-primary auth-submit">Создать аккаунт</button>
+        </form>
+
+        <p class="auth-alt">Уже есть аккаунт? <a href="/login">Войти</a></p>
+        <p class="auth-note">Регистрация необязательна — инструмент доступен всем без входа.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+{% endblock %}

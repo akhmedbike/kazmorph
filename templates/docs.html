@@ -1,0 +1,170 @@
+{#
+  API documentation page (route /api-docs).
+  Extends base.html; only the docs-layout content + docs.js are page-specific.
+  Header/footer/theme come from the shared chrome in base.html.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ "API" }} — KazMorph{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/app.css?v=3">
+{% endblock %}
+
+{% block shell_class %}no-right{% endblock %}
+
+{% block sidebar_right %}{% endblock %}
+
+{% block body_class %} class="docs-page"{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+<div class="docs-layout">
+    <!-- LEFT: sticky navigation -->
+    <nav class="docs-nav" id="docsNav">
+        <a href="#overview" class="nav-item active" data-i18n="docs_base_url"></a>
+        <a href="#auth" class="nav-item" data-i18n="docs_auth_title"></a>
+        <a href="#quickstart" class="nav-item" data-i18n="docs_quickstart"></a>
+        <div class="nav-group" data-i18n="docs_endpoints"></div>
+        <a href="#correct" class="nav-item"><span class="method post sm">POST</span> /correct</a>
+        <a href="#batch" class="nav-item"><span class="method post sm">POST</span> /analyze/batch</a>
+        <a href="#analyze" class="nav-item"><span class="method post sm">POST</span> /analyze</a>
+        <a href="#evaluate" class="nav-item"><span class="method post sm">POST</span> /evaluate</a>
+        <a href="#info" class="nav-item"><span class="method get sm">GET</span> /info</a>
+        <a href="#health" class="nav-item"><span class="method get sm">GET</span> /health</a>
+        <div class="nav-group" style="margin-top:0.75rem;" data-i18n="docs_integration"></div>
+        <a href="#integration" class="nav-item">Python · JS · curl</a>
+        <a href="#playground" class="nav-item" data-i18n="docs_playground_title"></a>
+        <a href="#errors" class="nav-item" data-i18n="docs_errors_title"></a>
+    </nav>
+
+    <!-- CENTER: content -->
+    <main class="docs-main">
+        <span class="docs-back" data-i18n="docs_back"></span>
+
+        <section class="ep" id="overview" data-view="overview">
+            <h2 class="docs-h2" data-i18n="docs_title"></h2>
+            <p class="docs-lead" data-i18n="docs_subtitle"></p>
+            <h3 data-i18n="docs_base_url"></h3>
+            <p class="mono-inline">{{ base_url }}</p>
+        </section>
+
+        <section class="ep" id="auth" data-view="auth">
+            <h3 data-i18n="docs_auth_title"></h3>
+            <p data-i18n="docs_auth_desc"></p>
+        </section>
+
+        <section class="ep" id="quickstart" data-view="quickstart">
+            <h3 data-i18n="docs_quickstart"></h3>
+            <p data-i18n="docs_playground_desc"></p>
+        </section>
+
+        <h2 class="docs-h2" data-i18n="docs_endpoints"></h2>
+
+        <section class="ep" id="correct" data-view="correct">
+            <div class="ep-head"><span class="method post">POST</span><code class="ep-path">/api/v1/correct</code></div>
+            <h3 data-i18n="ep_correct_t"></h3>
+            <p data-i18n="ep_correct_d"></p>
+            <h4 data-i18n="docs_parameters"></h4>
+            <table class="params">
+                <tr><th data-i18n="docs_field"></th><th data-i18n="docs_type"></th><th data-i18n="docs_desc_field"></th></tr>
+                <tr><td>text</td><td>string</td><td>Source text to correct (required)</td></tr>
+                <tr><td>confidence_threshold</td><td>float</td><td>0.0–1.0, default 0.5</td></tr>
+            </table>
+        </section>
+
+        <section class="ep" id="batch" data-view="batch">
+            <div class="ep-head"><span class="method post">POST</span><code class="ep-path">/api/v1/analyze/batch</code></div>
+            <h3 data-i18n="ep_batch_t"></h3>
+            <p data-i18n="ep_batch_d"></p>
+            <h4 data-i18n="docs_parameters"></h4>
+            <table class="params">
+                <tr><th data-i18n="docs_field"></th><th data-i18n="docs_type"></th><th data-i18n="docs_desc_field"></th></tr>
+                <tr><td>texts</td><td>string[]</td><td>Array of texts (required, ≥1)</td></tr>
+            </table>
+        </section>
+
+        <section class="ep" id="analyze" data-view="analyze">
+            <div class="ep-head"><span class="method post">POST</span><code class="ep-path">/api/analyze</code><span class="tag tag-none legacy">legacy</span></div>
+            <h3 data-i18n="ep_analyze_t"></h3>
+            <p data-i18n="ep_analyze_d"></p>
+            <h4 data-i18n="docs_parameters"></h4>
+            <table class="params">
+                <tr><th data-i18n="docs_field"></th><th data-i18n="docs_type"></th><th data-i18n="docs_desc_field"></th></tr>
+                <tr><td>text</td><td>string</td><td>Source text to analyze (required)</td></tr>
+            </table>
+        </section>
+
+        <section class="ep" id="evaluate" data-view="evaluate">
+            <div class="ep-head"><span class="method post">POST</span><code class="ep-path">/api/v1/evaluate</code></div>
+            <h3 data-i18n="ep_evaluate_t"></h3>
+            <p data-i18n="ep_evaluate_d"></p>
+            <h4 data-i18n="docs_parameters"></h4>
+            <table class="params">
+                <tr><th data-i18n="docs_field"></th><th data-i18n="docs_type"></th><th data-i18n="docs_desc_field"></th></tr>
+                <tr><td>gold</td><td>string</td><td>Gold annotation, CoNLL-U (required)</td></tr>
+                <tr><td>pred</td><td>string</td><td>System annotation, CoNLL-U (required)</td></tr>
+                <tr><td>min_support</td><td>int</td><td>Min tag frequency for recommendations, default 5</td></tr>
+            </table>
+        </section>
+
+        <section class="ep" id="info" data-view="info">
+            <div class="ep-head"><span class="method get">GET</span><code class="ep-path">/api/v1/info</code></div>
+            <h3 data-i18n="ep_info_t"></h3>
+            <p data-i18n="ep_info_d"></p>
+        </section>
+
+        <section class="ep" id="health" data-view="health">
+            <div class="ep-head"><span class="method get">GET</span><code class="ep-path">/api/health</code></div>
+            <h3 data-i18n="ep_health_t"></h3>
+            <p data-i18n="ep_health_d"></p>
+        </section>
+
+        <h2 class="docs-h2" id="integration" data-i18n="docs_integration"></h2>
+        <section class="ep" data-view="integration">
+            <p style="margin-bottom:1rem;" data-i18n="docs_playground_desc"></p>
+        </section>
+
+        <section class="ep playground" id="playground">
+            <h3 data-i18n="docs_playground_title"></h3>
+            <p data-i18n="docs_playground_desc"></p>
+            <label class="pg-label" data-i18n="docs_pg_input"></label>
+            <textarea id="pgInput" rows="3">Бүгін адамм мектепке келді, бірақ сөзз жоқ</textarea>
+            <button class="btn-primary" id="pgRun" data-i18n="docs_pg_run"></button>
+            <label class="pg-label" data-i18n="docs_pg_output" style="margin-top:1rem;"></label>
+            <pre id="pgOutput" class="pg-output"><span class="placeholder">—</span></pre>
+        </section>
+
+        <section class="ep" id="errors" data-view="errors">
+            <h3 data-i18n="docs_errors_title"></h3>
+            <p data-i18n="docs_errors_desc"></p>
+        </section>
+    </main>
+
+    <!-- RIGHT: sticky synced code panel -->
+    <aside class="docs-code" id="codePanel">
+        <div class="code-panel-head">
+            <span class="method" id="cpMethod"></span>
+            <code id="cpPath"></code>
+            <button class="copy-btn" id="cpCopy" data-i18n="docs_copy"></button>
+        </div>
+        <div class="code-tabs" id="cpTabs"></div>
+        <div class="code-block standalone">
+            <pre><code id="cpCode"></code></pre>
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+<script src="/static/js/docs.js?v=3"></script>
+<script>
+// Language switcher wiring (theme toggle + OS-theme handling come from base.html).
+document.querySelectorAll('.lang-btn').forEach(function(b) {
+    b.addEventListener('click', function() { setLang(b.dataset.lang); });
+});
+</script>
+{% endblock %}

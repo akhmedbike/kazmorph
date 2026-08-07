@@ -1,0 +1,46 @@
+{
+  "algorithm": "lbfgs",
+  "c1": 0.2,
+  "c2": 0.01,
+  "max_iterations": 150,
+  "all_possible_transitions": true,
+  "all_possible_states": true,
+  "dev_weighted_f1": 0.9421775167919294,
+  "grid": [
+    {
+      "c1": 0.01,
+      "c2": 0.01
+    },
+    {
+      "c1": 0.01,
+      "c2": 0.1
+    },
+    {
+      "c1": 0.05,
+      "c2": 0.01
+    },
+    {
+      "c1": 0.05,
+      "c2": 0.05
+    },
+    {
+      "c1": 0.1,
+      "c2": 0.01
+    },
+    {
+      "c1": 0.1,
+      "c2": 0.1
+    },
+    {
+      "c1": 0.2,
+      "c2": 0.01
+    },
+    {
+      "c1": 0.5,
+      "c2": 0.01
+    }
+  ],
+  "train_file": "data/train.conllu",
+  "dev_file": "data/dev.conllu",
+  "seed": 42
+}

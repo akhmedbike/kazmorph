@@ -1,0 +1,336 @@
+/* ============================================================
+   shell.css — dashboard app-shell layout.
+   Full-width header/footer (set in base.css) + left sidebar +
+   main column + right sidebar. Loaded by EVERY page via base.html.
+   Depends on base.css design tokens (--primary, --surface, …).
+   ============================================================ */
+
+/* ---------- App shell grid: left | main | right ----------
+   The shell spans the full viewport width: the two sidebars pin to the left
+   and right edges (with padding), and the main column fills the middle. */
+.app-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr) 290px;
+    gap: 1.5rem;
+    align-items: start;
+    padding: 1.5rem;
+    flex: 1;
+    width: 100%;
+}
+/* Two-column variant (left + main only) for pages that hide the right
+   sidebar via {% block shell_class %}app-shell no-right{% endblock %}. */
+.app-shell.no-right {
+    grid-template-columns: 250px minmax(0, 1fr);
+}
+
+.main-col {
+    min-width: 0;                   /* allow flex/grid children to shrink */
+    width: 100%;
+}
+/* Wide main column (kept for clarity; center now fills available width by
+   default). Set via {% block main_class %}wide{% endblock %}. */
+.main-col.wide {
+    width: 100%;
+}
+
+/* Centered, single-column shell for auth pages (no sidebars). */
+.app-shell-centered {
+    grid-template-columns: 1fr;
+    justify-items: center;
+}
+.app-shell-centered .main-col {
+    max-width: 460px;              /* match the auth-card width */
+    width: 100%;
+}
+
+/* ---------- Shared sidebar base ---------- */
+.sidebar {
+    position: sticky;
+    top: 80px;                      /* clear the sticky header */
+    align-self: start;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-bottom: 1rem;
+}
+
+/* ---------- Sidebar sections / cards ---------- */
+.sb-section,
+.sb-card {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;            /* rounded.md (DESIGN.md) */
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.sb-section-title,
+.sb-card-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+}
+
+/* ---------- Account block (left) ---------- */
+/* .sb-account is a .sb-section modifier (semantic hook for the account card). */
+.sb-account {
+    /* inherits .sb-section chrome; add account-specific tweaks here if needed */
+}
+.sb-user {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+}
+.sb-user .account-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+}
+.sb-user-email {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.sb-account-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+/* Full-width buttons inside sidebars. */
+.btn-block {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+}
+
+.sb-guest-prompt {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+}
+
+/* User stats → now the shared .stat-grid-sm + .stat-card component (base.css). */
+
+/* ---------- Account widgets (shared by header + sidebar on EVERY page) ----
+   These belong here (not auth.css) because the account chip / avatar / small
+   buttons appear in the header and left sidebar of all pages, not just the
+   auth/account screens. Otherwise pages like / (no auth.css) get oversized
+   buttons and unstyled avatars. */
+.btn-sm {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+}
+.header-account {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.account-form {
+    margin: 0;
+    display: inline;
+}
+.account-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 3px 10px 3px 3px;
+    border-radius: 9999px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    max-width: 200px;
+    transition: all 0.15s;
+}
+.account-chip:hover {
+    border-color: var(--primary);
+    background: var(--primary-bg);
+}
+.account-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.account-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- Navigation (left) ---------- */
+.sb-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sb-nav-item {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;             /* rounded.sm */
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 0.12s, color 0.12s;
+    line-height: 1.3;
+}
+.sb-nav-item:hover {
+    background: var(--surface-strong);
+    text-decoration: none;
+}
+.sb-nav-item.active {
+    background: var(--primary-bg);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* ---------- Right sidebar: legend ---------- */
+.sb-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+.sb-legend li {
+    display: grid;
+    grid-template-columns: 14px 34px 1fr;
+    align-items: start;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+.sb-legend .legend-dot {
+    margin-top: 5px;
+}
+.sb-legend-code {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.75rem;
+}
+.sb-legend-desc {
+    color: var(--text-muted);
+    font-size: 0.74rem;
+}
+
+/* ---------- Right sidebar: how-to ---------- */
+.sb-howto-text {
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* ---------- Right sidebar: pipeline ---------- */
+.sb-pipeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    counter-reset: stage;
+}
+.sb-pipeline li {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+.sb-stage-code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary);
+    background: var(--primary-bg);
+    padding: 3px 7px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+/* Drop the right sidebar below ~1180px — give the main column more room. */
+@media (max-width: 1180px) {
+    .app-shell {
+        grid-template-columns: 250px minmax(0, 1fr);
+    }
+    .sidebar-right {
+        display: none;
+    }
+}
+
+/* Collapse the left sidebar below ~860px into a stacked top block. */
+@media (max-width: 860px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    .sidebar {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .sidebar-left {
+        order: 1;
+    }
+    /* On narrow screens the account block + nav sit side by side, compact. */
+    .sb-section,
+    .sb-card {
+        flex: 1 1 220px;
+    }
+    /* Header account chip: hide the email text, keep only the avatar. */
+    .account-name {
+        display: none;
+    }
+    .header-account .btn-sm[data-i18n="nav_login"] {
+        padding: 4px 10px;
+    }
+    .main-col {
+        order: 2;
+        max-width: 100%;
+    }
+}
+
+/* Phones: stack everything vertically. */
+@media (max-width: 560px) {
+    .sidebar {
+        flex-direction: column;
+    }
+    .sb-section,
+    .sb-card {
+        flex: 1 1 100%;
+    }
+}

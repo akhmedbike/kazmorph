@@ -1,0 +1,43 @@
+{
+  "seed": 42,
+  "dev_frac": 0.15,
+  "test_frac": 0.15,
+  "pool_sentences": 1078,
+  "splits": {
+    "train": "data/train.conllu",
+    "dev": "data/dev.conllu",
+    "test": "data/test.conllu"
+  },
+  "stats": [
+    {
+      "split": "Training",
+      "sentences": 754,
+      "tokens": 7376,
+      "avg_tokens_per_sent": 9.78,
+      "unique_upos": 17
+    },
+    {
+      "split": "Development",
+      "sentences": 162,
+      "tokens": 1566,
+      "avg_tokens_per_sent": 9.67,
+      "unique_upos": 16
+    },
+    {
+      "split": "Test",
+      "sentences": 162,
+      "tokens": 1594,
+      "avg_tokens_per_sent": 9.84,
+      "unique_upos": 16
+    },
+    {
+      "split": "Total",
+      "sentences": 1078,
+      "tokens": 10536,
+      "avg_tokens_per_sent": 9.77,
+      "unique_upos": 17
+    }
+  ],
+  "oov_dev_vs_train": 0.3646,
+  "oov_test_vs_train": 0.3513
+}

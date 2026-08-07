@@ -1,0 +1,36 @@
+# Core
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+pydantic>=2.0.0
+
+# ML (Step 2 — CRF)
+sklearn-crfsuite>=0.4.0
+joblib>=1.3.0
+
+# ML (Step 3 — Neural)
+torch>=2.0.0
+transformers>=4.30.0
+datasets>=2.14.0
+seqeval>=1.2.2
+
+# Utilities
+python-multipart>=0.0.6
+
+# Database + auth (Этап: сбор данных и личный кабинет)
+sqlalchemy>=2.0
+alembic>=1.12
+bcrypt>=4.0
+psycopg2-binary>=2.9
+itsdangerous>=2.1
+
+# Active Learning (LLM-ревьюер + RSS-харвестер)
+# anthropic — Claude API для проверки морфоразборов (teacher-модель в схеме
+#   weak supervision). Только для runtime-агента, не для разработки
+#   (разработка идёт через GLM Coding Plan в ZCode).
+anthropic>=0.40
+# feedparser — RSS-ленты госсайтов (inform.kz и др.).
+feedparser>=6.0
+# trafilatura — извлечение основного текста из HTML (для источников без RSS).
+trafilatura>=1.6
+# PyYAML — чтение config/sources.yaml со списком RSS/HTML источников.
+PyYAML>=6.0
