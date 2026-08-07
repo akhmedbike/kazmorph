@@ -14,7 +14,7 @@ Kazakh-KTB corpus.
 
 ## How to cite
 
-* After publication add information
+# TODO. Will add citation ffter publication in journal.
 
 ---
 
@@ -302,8 +302,9 @@ The two neural checkpoints are too large for Git (~420 MB each) and are
 | `models/neural_pos/model.safetensors` | ~420 MB | Fine-tuned KazBERT POS tagger |
 | `models/neural_lemma/model.safetensors` | ~420 MB | Fine-tuned KazBERT lemmatizer |
 
-**Download:** [Download model weights (Zenodo / Google Drive)](TODO_ADD_LINK)
-<!-- Replace TODO_ADD_LINK with your Zenodo/Google Drive link before publishing. -->
+**Download:** [Download model weights (Zenodo / Google Drive)](https://drive.google.com/drive/folders/1bwqtml8R47vs5oEVxAgOF8YckfsQ5umw?usp=sharing)
+
+#TODO. First verson on google drive after all reviews replace to Zenodo.
 
 Place the weights under `models/`. The CRF model (`models/crf_model.joblib`,
 176 KB) and all small config files are included in the repository. Without the
