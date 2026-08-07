@@ -14,7 +14,7 @@ Kazakh-KTB corpus.
 
 ## How to cite
 
-# TODO. Will add citation ffter publication in journal.
+### TODO. Will add citation after publication in journal.
 
 ---
 
