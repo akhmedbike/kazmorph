@@ -1,0 +1,209 @@
+{#
+  Sources / Active Learning control (route /admin/sources): ручной запуск
+  цикла AL — 3 последовательных шага.
+
+    ① Сбор (harvest)   — тянет тексты из источников в data/raw_news/.
+    ② Отбор (select)   — находит low-confidence токены → data/candidates/.
+    ③ LLM-ревью (review) — Claude-ревью кандидатов → Annotation(pending)
+                           в БД → появляются в /admin/review.
+
+  Шаг 3 тратит токены Claude, поэтому кнопка подтверждения в JS сначала
+  дёргает /candidates/preview (число кандидатов + оценка стоимости).
+
+  context: sources, task_state, candidates_preview
+#}
+{% extends "base.html" %}
+
+{% block title %}Источники — Active Learning — KazMorphCorpus-2026{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/admin.css?v=4">
+{% endblock %}
+
+{% block shell_class %}no-right{% endblock %}
+{% block sidebar_right %}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+<div class="container admin-wrap">
+    <div class="admin-header">
+        <div class="admin-breadcrumbs">
+            <a href="/admin">← Active Learning</a>
+        </div>
+        <h1>Источники и сбор данных</h1>
+        <p class="admin-subtitle">
+            Ручной запуск цикла Active Learning. Шаги идут по порядку — каждый
+            обрабатывает результат предыдущего.
+        </p>
+    </div>
+
+    {# Визуализация порядка шагов ① → ② → ③ #}
+    <div class="pipeline-steps" id="pipeline-steps">
+        <span class="pstep" data-step="harvest">
+            <span class="pstep-num">1</span>
+            <span class="pstep-name">Сбор</span>
+        </span>
+        <span class="pstep-arrow">→</span>
+        <span class="pstep" data-step="select">
+            <span class="pstep-num">2</span>
+            <span class="pstep-name">Отбор</span>
+        </span>
+        <span class="pstep-arrow">→</span>
+        <span class="pstep" data-step="review">
+            <span class="pstep-num">3</span>
+            <span class="pstep-name">LLM-ревью</span>
+        </span>
+        <span class="pstep-arrow">→</span>
+        <span class="pstep pstep-dest">
+            <span class="pstep-num">✓</span>
+            <span class="pstep-name"><a href="/admin/review?status=pending">Очередь ревью</a></span>
+        </span>
+    </div>
+
+    {% if sources %}
+    <div class="sources-panel">
+        {# Шаг 1: выбор источника + кнопка «Собрать» #}
+        <div class="al-section" data-step="harvest">
+            <div class="al-section-head">
+                <span class="al-step-badge">1</span>
+                <h3>Сбор текстов</h3>
+                <span class="al-hint">RSS/HTML из config/sources.yaml</span>
+            </div>
+            <div class="sources-list">
+                {% for s in sources %}
+                <label class="source-card">
+                    <input type="radio" name="source" value="{{ s.name }}"
+                           class="source-radio" {% if loop.first %}checked{% endif %}>
+                    <div class="source-body">
+                        <div class="source-head">
+                            <span class="source-name">{{ s.name }}</span>
+                            <span class="source-type source-type-{{ s.type }}">{{ s.type }}</span>
+                            <span class="source-lang">{{ s.lang }}</span>
+                            <span class="source-cat">{{ s.category }}</span>
+                        </div>
+                        {% if s.description %}
+                        <div class="source-desc">{{ s.description }}</div>
+                        {% endif %}
+                        <div class="source-meta">
+                            <span>максимум {{ s.max_articles|default(50) }} статей</span>
+                            {% if s.url %}<span class="source-url">{{ s.url }}</span>{% endif %}
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+
+                <label class="source-card source-card-all">
+                    <input type="radio" name="source" value="" class="source-radio">
+                    <div class="source-body">
+                        <div class="source-head">
+                            <span class="source-name">Все источники</span>
+                        </div>
+                        <div class="source-desc">Собрать последовательно все источники из списка выше.</div>
+                    </div>
+                </label>
+            </div>
+            <div class="al-section-actions">
+                <button type="button" class="btn btn-primary al-run-btn" data-step="harvest"
+                        onclick="adminSources.run('harvest')">
+                    ⬇ Собрать
+                </button>
+            </div>
+        </div>
+
+        {# Шаг 2: отбор кандидатов (работает по всем собранным за сегодня) #}
+        <div class="al-section" data-step="select">
+            <div class="al-section-head">
+                <span class="al-step-badge">2</span>
+                <h3>Отбор кандидатов</h3>
+                <span class="al-hint">по собранным за сегодня ({{ candidates_preview.date }})</span>
+            </div>
+            <p class="al-section-desc">
+                Прогоняет пайплайн по собранным статьям и отбирает токены с
+                confidence &lt; {{ al_threshold }} (или сложным классом) — это
+                кандидаты для LLM-ревью.
+            </p>
+            <div class="al-section-actions">
+                <button type="button" class="btn btn-primary al-run-btn" data-step="select"
+                        onclick="adminSources.run('select')">
+                    ⚙ Отобрать кандидатов
+                </button>
+                <button type="button" class="btn btn-secondary al-show-candidates"
+                        onclick="adminSources.openCandidates()"
+                        {% if candidates_preview.n_candidates == 0 %}disabled title="Кандидатов нет — запустите отбор"{% endif %}>
+                    👁 Показать кандидатов
+                </button>
+            </div>
+        </div>
+
+        {# Шаг 3: LLM-ревью (тратит токены — с подтверждением) #}
+        <div class="al-section al-section-review" data-step="review">
+            <div class="al-section-head">
+                <span class="al-step-badge">3</span>
+                <h3>LLM-ревью</h3>
+                <span class="al-hint">тратит токены Claude</span>
+            </div>
+            <p class="al-section-desc">
+                Claude ({{ candidates_preview.date }}) проверяет каждого кандидата и
+                предлагает разбор. Результат попадает в очередь
+                <a href="/admin/review?status=pending">/admin/review</a> как
+                pending — для твоего подтверждения.
+            </p>
+            <div class="candidates-preview" id="candidates-preview"
+                 data-n="{{ candidates_preview.n_candidates }}"
+                 data-cost="{{ candidates_preview.est_cost_usd }}">
+                Кандидатов за сегодня: <strong>{{ candidates_preview.n_candidates }}</strong>
+                <span class="cost-estimate">оценка: ~${{ '%.4f'|format(candidates_preview.est_cost_usd) }}</span>
+            </div>
+            <div class="al-section-actions">
+                <button type="button" class="btn btn-review al-run-btn" data-step="review"
+                        onclick="adminSources.run('review')"
+                        {% if candidates_preview.n_candidates == 0 %}disabled title="Сначала отберите кандидатов (шаг 2)"{% endif %}>
+                    ✨ Запустить LLM-ревью
+                </button>
+            </div>
+        </div>
+
+        {# Блок статуса — обновляется JS. data-state prima server-side. #}
+        <div class="al-status" id="al-status" data-state="{{ task_state.status }}"
+             data-step="{{ task_state.step or '' }}">
+            {% if task_state.status == 'running' %}
+            <div class="al-running">
+                <span class="spinner"></span>
+                {% set label = {'harvest': 'сбор текстов', 'select': 'отбор кандидатов', 'review': 'LLM-ревью'}.get(task_state.step, task_state.step) %}
+                Выполняется: {{ label }}…
+            </div>
+            {% elif task_state.status == 'error' and task_state.result %}
+            <div class="al-error">Ошибка: {{ task_state.result }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Модальное окно: список кандидатов (загружается по клику). #}
+    <div class="modal-overlay" id="candidates-modal" hidden onclick="adminSources.closeCandidates(event)">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="candidates-modal-title">
+            <div class="modal-head">
+                <h3 id="candidates-modal-title">Кандидаты за <span id="cand-date">—</span></h3>
+                <button type="button" class="modal-close" aria-label="Закрыть"
+                        onclick="adminSources.closeCandidates()">✕</button>
+            </div>
+            <div class="modal-summary" id="cand-summary"></div>
+            <div class="modal-body" id="cand-body">
+                <div class="modal-loading"><span class="spinner"></span> Загрузка…</div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="review-empty">
+        <p>Не удалось прочитать <code>config/sources.yaml</code> — список источников пуст.</p>
+        <p>Проверьте файл и попробуйте обновить страницу.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/i18n.js?v=15"></script>
+<script src="/static/js/admin_sources.js?v=3"></script>
+{% endblock %}

@@ -1,5 +1,5 @@
 """
-Админка Active Learning: ревью LLM-предложений.
+Админка Active Learning: ревью LLM-предложений + ручной сбор источников.
 
   GET  /admin                          — дашборд: счётчики pending/approved/rejected
   GET  /admin/review                   — таблица pending-кандидатов (пагинация)
@@ -8,6 +8,12 @@
   GET  /api/low_confidence             — pending-кандидаты как JSON (для интеграций)
   GET  /api/admin/stats                — сводная статистика для дашборда
 
+  GET  /admin/sources                  — управление циклом AL: список источников + 3 кнопки
+  POST /admin/sources/run              — запустить шаг (harvest/select/review) фоновой задачей
+  GET  /admin/sources/status           — статус последнего/текущего шага (для polling)
+  GET  /admin/sources/candidates          — список кандидатов за дату (для модального окна)
+  GET  /admin/sources/candidates/preview — превью кандидатов + оценка стоимости LLM
+
 Доступ только для администраторов (require_admin → 403 для не-админа,
 401 для анонима). Все правки LLM проходят ручное подтверждение здесь —
 это защита от рисков №1 (некомпетентность LLM) и №2 (model collapse).
@@ -15,6 +21,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -26,10 +33,18 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_db, require_admin
 from app.models import ANNOTATION_STATUSES, Annotation, User
+from app.services.harvest_runner import (
+    STEPS,
+    TaskError,
+    count_candidates_today,
+    get_task_state,
+    start_task,
+)
 from kazmorph.pipeline import ACTIVE_LEARNING_THRESHOLD
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+logger = logging.getLogger("admin")
 
 PER_PAGE = 25
 
@@ -79,6 +94,16 @@ class DecisionRequest(BaseModel):
     decision: str = Field(..., description="approved | rejected | edited")
     final_lemma: str | None = Field(None, description="Своя лемма (только для edited)")
     final_pos: str | None = Field(None, description="Свой POS (только для edited)")
+
+
+class RunRequest(BaseModel):
+    """Тело POST /admin/sources/run.
+
+    step:   harvest | select | review — шаг цикла Active Learning.
+    source: только для harvest — имя источника или null (все).
+    """
+    step: str = Field(..., description="harvest | select | review")
+    source: str | None = Field(None, description="Имя источника (только для harvest)")
 
 
 def _apply_decision(ann: Annotation, body: DecisionRequest, reviewer: User) -> None:
@@ -238,6 +263,142 @@ async def admin_decision(
         "status": ann.status,
         "final_lemma": ann.final_lemma,
         "final_pos": ann.final_pos,
+    })
+
+
+# ============================================================
+#  Ручное управление циклом Active Learning (harvest / select / review)
+# ============================================================
+
+
+def _load_sources_list() -> list[dict]:
+    """Прочитать config/sources.yaml → список источников (для страницы /admin/sources).
+
+    Ленивый импорт: harvest_sources при import делает sys.path.insert, что
+    безопасно, но оставлять его на старте приложения незачем.
+    """
+    from scripts.harvest_sources import load_sources
+
+    try:
+        return load_sources()
+    except (OSError, ValueError) as exc:
+        # Конфиг отсутствует/битый — отдаём пустой список, страница покажет
+        # сообщение вместо крэша.
+        logger.warning("Не удалось прочитать sources.yaml: %s", exc)
+        return []
+
+
+@router.get("/admin/sources")
+async def admin_sources(
+    request: Request,
+    user: User = Depends(require_admin),
+):
+    """Страница управления циклом AL: список источников + кнопки 3 шагов."""
+    sources = _load_sources_list()
+    return templates.TemplateResponse(
+        request,
+        "admin/sources.html",
+        _ctx(
+            request,
+            user,
+            sources=sources,
+            task_state=get_task_state(),
+            candidates_preview=count_candidates_today(),
+        ),
+    )
+
+
+@router.post("/admin/sources/run")
+async def admin_al_run(
+    body: RunRequest,
+    user: User = Depends(require_admin),
+):
+    """Запустить шаг цикла AL фоновой задачей. 202 + снимок состояния.
+
+    step: harvest | select | review. Для harvest можно указать source
+    (имя источника или null = все). 409 — уже выполняется другой шаг;
+    422 — неизвестный шаг или источник не найден в sources.yaml.
+    """
+    if body.step not in STEPS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Неизвестный шаг {body.step!r}",
+        )
+    if body.step == "harvest" and body.source is not None:
+        names = {s["name"] for s in _load_sources_list()}
+        if body.source not in names:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Источник {body.source!r} не найден в sources.yaml",
+            )
+    try:
+        start_task(body.step, source=body.source if body.step == "harvest" else None)
+    except TaskError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return JSONResponse(status_code=202, content=get_task_state())
+
+
+@router.get("/admin/sources/status")
+async def admin_al_status(
+    user: User = Depends(require_admin),
+):
+    """Снимок состояния последнего/текущего шага (для polling из JS)."""
+    return JSONResponse(get_task_state())
+
+
+@router.get("/admin/sources/candidates/preview")
+async def admin_candidates_preview(
+    user: User = Depends(require_admin),
+):
+    """Превью кандидатов за сегодня + оценка стоимости LLM-ревью.
+
+    Для confirm-диалога перед шагом review: показывает, сколько кандидатов
+    будет обработано и сколько это будет стоить (~$). Если кандидатов 0 —
+    UI блокирует кнопку review.
+    """
+    return JSONResponse(count_candidates_today())
+
+
+@router.get("/admin/sources/candidates")
+async def admin_candidates_list(
+    date: str | None = None,
+    limit: int = 200,
+    user: User = Depends(require_admin),
+):
+    """Список кандидатов за дату (JSON) — для модального окна в /admin/sources.
+
+    Читает data/candidates/{date}.jsonl (по умолчанию — сегодня). Параметр
+    ``limit`` ограничивает размер выдачи (default 200), чтобы не тянуть
+    тысячи строк в браузер. Возвращает сводку по сложности + сами записи.
+    """
+    from scripts.llm_review import load_candidates
+
+    pv = count_candidates_today()
+    date_str = date or pv["date"]
+    limit = max(1, min(limit, 1000))
+    candidates = load_candidates(date_str)[:limit]
+    # Сводка по классам сложности (для шапки модального окна).
+    by_diff: dict[str, int] = {}
+    for c in candidates:
+        dc = c.get("difficulty_class", "NONE")
+        by_diff[dc] = by_diff.get(dc, 0) + 1
+    return JSONResponse({
+        "date": date_str,
+        "n_shown": len(candidates),
+        "n_total": pv["n_candidates"] if date is None else None,
+        "by_difficulty": by_diff,
+        "candidates": [
+            {
+                "token": c.get("token", ""),
+                "lemma": c.get("lemma", ""),
+                "pos": c.get("pos", ""),
+                "confidence": c.get("confidence", 0),
+                "difficulty_class": c.get("difficulty_class", "NONE"),
+                "sentence": c.get("sentence", ""),
+                "source_url": c.get("source_url", ""),
+            }
+            for c in candidates
+        ],
     })
 
 

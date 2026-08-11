@@ -56,6 +56,9 @@
                 <span class="verdict-badge verdict-{{ a.llm_verdict }}">{{ a.llm_verdict }}</span>
                 <span class="diff-badge diff-{{ a.difficulty_class|lower }}">{{ a.difficulty_class }}</span>
                 <span class="conf-badge">conf {{ (a.pipeline_confidence * 100)|round(0) }}%</span>
+                <span class="date-badge" title="Дата добавления в ревью">
+                    {{ a.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </span>
                 {% if a.status != 'pending' %}
                 <span class="status-badge status-{{ a.status }}">{{ a.status }}</span>
                 {% endif %}

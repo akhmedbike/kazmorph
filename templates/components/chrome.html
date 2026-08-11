@@ -113,7 +113,10 @@
         <a href="/" class="sb-nav-item {{ _is_active('/') }}" data-i18n="nav_dashboard"></a>
         {% if is_authenticated %}<a href="/dashboard" class="sb-nav-item {{ _is_active('/dashboard') }}" data-i18n="nav_account"></a>{% endif %}
         {# Admin link — only visible to admins (Active Learning review). #}
-        {% if current_user and current_user.is_admin %}<a href="/admin" class="sb-nav-item {{ _is_active('/admin') }}" data-i18n="nav_admin"></a>{% endif %}
+        {% if current_user and current_user.is_admin %}
+        <a href="/admin" class="sb-nav-item {{ _is_active('/admin') }}" data-i18n="nav_admin"></a>
+        <a href="/admin/sources" class="sb-nav-item {{ _is_active('/admin/sources') }}">Источники</a>
+        {% endif %}
         <a href="/api-docs" class="sb-nav-item {{ _is_active('/api-docs') }}" data-i18n="footer_docs"></a>
     </nav>
 </aside>

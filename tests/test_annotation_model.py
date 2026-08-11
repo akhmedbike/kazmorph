@@ -211,26 +211,111 @@ class TestIsAdminField:
 
 
 # ============================================================
-#  require_admin — зависимость FastAPI
+#  require_user / require_admin — зависимости FastAPI
 # ============================================================
+#
+# После разделения браузерного (Accept: text/html) и API-флоу сигнатуры
+# зависимостей приняли ``request: Request`` и поведение разветвилось:
+#
+#   • API (нет text/html или /api/*) → HTTPException с JSON;
+#   • браузер (Accept: text/html)    → BrowserAuthResponse, несущий готовый
+#     RedirectResponse (302/303 на логин) или TemplateResponse (403).
+#
+# Полный end-to-end путь (через TestClient) покрыт в test_admin_routes.py;
+# здесь — прямые unit-вызовы на фейковом Starlette-запросе, чтобы проверить
+# логику каждой ветви в изоляции.
+
+
+def _make_request(path: str = "/admin", *, accept: str | None = "text/html",
+                  query: str = "") -> "Request":
+    """Собрать Starlette Request из минимального scope для прямого вызова.
+
+    ``accept=None`` → заголовок не добавляется (эмулирует AJAX/API-клиент).
+    Сессия пустая — аноним; require_user/require_admin её не читают сами
+    (пользователь приходит параметром), так что для этих тестов её содержимое
+    не важно.
+    """
+    from starlette.requests import Request
+    headers: list = []
+    if accept is not None:
+        headers.append((b"accept", accept.encode()))
+    scope = {
+        "type": "http", "method": "GET",
+        "path": path, "raw_path": path.encode(),
+        "query_string": query.encode(),
+        "headers": headers,
+        "session": {},
+    }
+    return Request(scope)
+
+
+class TestRequireUser:
+    def test_authenticated_returns_user(self, sqlite_db):
+        """Залогиненный пользователь проходит как для API, так и для браузера."""
+        from tests.conftest import make_user
+        from app.db import get_session_factory
+        factory = get_session_factory()
+        db = factory()
+        try:
+            user = make_user(db, email="u@t.kz")
+            assert require_user(_make_request(), user=user) is user
+            assert require_user(_make_request(accept="application/json"), user=user) is user
+        finally:
+            db.close()
+
+    def test_anonymous_api_raises_401(self):
+        """API-клиент (без text/html) получает JSON 401."""
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc:
+            require_user(_make_request(accept="application/json"), user=None)
+        assert exc.value.status_code == 401
+
+    def test_anonymous_browser_redirects_to_login(self):
+        """Браузер (Accept: text/html) получает redirect на /login?next=."""
+        from app.auth import BrowserAuthResponse
+        with pytest.raises(BrowserAuthResponse) as exc:
+            require_user(_make_request(path="/admin"), user=None)
+        resp = exc.value.response
+        assert resp.status_code == 303
+        assert resp.headers["location"].startswith("/login?next=")
+        assert "/admin" in resp.headers["location"]
+
+    def test_anonymous_browser_redirect_carries_query_string(self):
+        """Оригинальный query сохраняется в next (lossless round-trip)."""
+        from app.auth import BrowserAuthResponse
+        with pytest.raises(BrowserAuthResponse) as exc:
+            require_user(
+                _make_request(path="/admin/review", query="page=2&status=pending"),
+                user=None,
+            )
+        location = exc.value.response.headers["location"]
+        assert "page=2" in location
+        assert "status=pending" in location
+
+    def test_anonymous_api_path_stays_json_even_with_html_accept(self):
+        """/api/* никогда не уходит в HTML/redirect — JS ждёт JSON."""
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc:
+            # Даже с Accept: text/html путь /api/ форсирует JSON-ветвь.
+            require_user(_make_request(path="/api/low_confidence"), user=None)
+        assert exc.value.status_code == 401
 
 
 class TestRequireAdmin:
     def test_admin_passes(self, sqlite_db):
-        """Админ проходит require_admin без исключения."""
+        """Админ проходит require_admin без исключения (обе ветви Accept)."""
         from tests.conftest import make_user
         from app.db import get_session_factory
         factory = get_session_factory()
         db = factory()
         try:
             admin = make_user(db, email="a@t.kz", is_admin=True)
-            # require_admin(admin) не должен бросать.
-            result = require_admin(user=admin)
-            assert result is admin
+            assert require_admin(_make_request(), user=admin) is admin
+            assert require_admin(_make_request(accept="application/json"), user=admin) is admin
         finally:
             db.close()
 
-    def test_non_admin_raises_403(self, sqlite_db):
+    def test_non_admin_api_raises_403(self, sqlite_db):
         from fastapi import HTTPException
         from tests.conftest import make_user
         from app.db import get_session_factory
@@ -239,17 +324,24 @@ class TestRequireAdmin:
         try:
             regular = make_user(db, email="r@t.kz", is_admin=False)
             with pytest.raises(HTTPException) as exc:
-                require_admin(user=regular)
+                require_admin(_make_request(accept="application/json"), user=regular)
             assert exc.value.status_code == 403
         finally:
             db.close()
 
-    def test_anonymous_raises_401(self):
-        """require_admin зависит от require_user, который даёт 401 для анонима.
-
-        Здесь проверяем сам require_user (require_admin его вызывает первым).
-        """
-        from fastapi import HTTPException
-        with pytest.raises(HTTPException) as exc:
-            require_user(user=None)
-        assert exc.value.status_code == 401
+    def test_non_admin_browser_gets_html_403(self, sqlite_db):
+        from app.auth import BrowserAuthResponse
+        from tests.conftest import make_user
+        from app.db import get_session_factory
+        factory = get_session_factory()
+        db = factory()
+        try:
+            regular = make_user(db, email="r@t.kz", is_admin=False)
+            with pytest.raises(BrowserAuthResponse) as exc:
+                require_admin(_make_request(), user=regular)
+            resp = exc.value.response
+            assert resp.status_code == 403
+            assert resp.media_type == "text/html"
+            assert "Недостаточно прав" in resp.body.decode()
+        finally:
+            db.close()
