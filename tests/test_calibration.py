@@ -109,3 +109,37 @@ class TestCalibrationMath:
         confs = [1.0, 1.0, 1.0, 1.0]
         correct = [False, False, False, False]  # conf=1.0 but acc=0
         assert _ece(confs, correct, n_bins=10) > 0.9
+
+
+class TestRegionTemperatureScaling:
+    """RD-TS (Region-Dependent Temperature Scaling) — optional calibration
+    refinement. Lazy-imports torch so the rest of this file still runs without
+    torch installed."""
+
+    @staticmethod
+    def _synthetic():
+        import torch
+        torch.manual_seed(0)
+        logits, gold, pred = [], [], []
+        for i in range(50):
+            # Confident-and-correct and overconfident-but-wrong tokens.
+            l = torch.tensor([5.0, 0.0]) if i % 2 == 0 else torch.tensor([4.5, 0.0])
+            logits.append(l)
+            gold.append(0 if i % 2 == 0 else 1)
+            pred.append(0)  # model always predicts label 0 (overconfident)
+        return logits, gold, pred
+
+    def test_fit_returns_three_regions(self):
+        pytest.importorskip("torch")
+        from kazmorph.calibration import fit_region_temperature
+        logits, gold, pred = self._synthetic()
+        r = fit_region_temperature(logits, gold, pred, n_regions=3)
+        assert len(r.regions) == 3
+        assert all(reg["temperature"] > 0 for reg in r.regions)
+
+    def test_region_does_not_increase_ece(self):
+        pytest.importorskip("torch")
+        from kazmorph.calibration import fit_region_temperature
+        logits, gold, pred = self._synthetic()
+        r = fit_region_temperature(logits, gold, pred, n_regions=3)
+        assert r.ece_after <= r.ece_before + 1e-9

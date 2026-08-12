@@ -9,12 +9,13 @@ Produces, for one or more pipeline configurations on a held-out test set:
   5. A confusion matrix (CSV) and error-class distribution (CSV)
   6. A machine-readable metrics.json + run_config.json for the paper's tables
 
-Configuration set (paper ablation A–E):
+Configuration set (paper ablation A–F):
   A) RMA-only            Pipeline(crf=None, neural=None)
   B) RMA+CRF             Pipeline(crf=..., neural=None)
   C) RMA+Neural          Pipeline(crf=None, neural=...)         (linear cascade)
   D) Hybrid (cascade)    Pipeline(crf=..., neural=...)          (no routing)
-  E) Hybrid+routing      Pipeline(crf=..., neural=..., routing=True)  (paper arch)
+  E) Hybrid+routing      Pipeline(crf=..., neural=..., routing=True)   (fusion; non-significant)
+  F) Hybrid+fallback     Pipeline(crf=..., neural=..., fallback=True) (neural only for OOV/low-conf)
 
 Usage:
     .venv/bin/python scripts/evaluate.py [--test-file data/test.conllu]
@@ -384,9 +385,9 @@ def main():
     neural_path = "models/neural_pos"
     lemma_path = "models/neural_lemma"
 
-    # Build the requested configuration set (paper ablation A–E).
+    # Build the requested configuration set (paper ablation A–F).
     configs: list[tuple[str, Pipeline]] = []
-    requested = ["A", "B", "C", "D", "E"] if args.config == "all" else [args.config]
+    requested = ["A", "B", "C", "D", "E", "F"] if args.config == "all" else [args.config]
 
     cfg_map = {
         # name, label, pipeline factory
@@ -403,9 +404,19 @@ def main():
             neural_model_path=neural_path if os.path.exists(neural_path) else None,
             lemma_model_path=lemma_path if os.path.exists(lemma_path) else None,
             routing=True)),
+        # F: hard neural fallback — CRF is the default POS source; the neural
+        # tagger contributes only for tokens the CRF leaves unknown or
+        # low-confidence. Lemma is intentionally NOT taken from the neural
+        # lemmatizer (lemma_model_path omitted) so that F differs from B only
+        # in the POS source, isolating the fallback effect.
+        "F": ("RMA+CRF+Neural-fallback", lambda: Pipeline(
+            crf_model_path=crf_path if os.path.exists(crf_path) else None,
+            neural_model_path=neural_path if os.path.exists(neural_path) else None,
+            fallback=True)),
     }
     # Map the friendly --config names to ablation letters.
-    friendly = {"rma": "A", "crf": "B", "neural": "C", "hybrid": "D", "full": "E"}
+    friendly = {"rma": "A", "crf": "B", "neural": "C", "hybrid": "D",
+                "full": "E", "fallback": "F"}
 
     models: list[tuple[str, list[dict]]] = []
     for key in requested:

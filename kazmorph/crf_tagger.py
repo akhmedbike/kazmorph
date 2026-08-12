@@ -38,19 +38,43 @@ class CRFTagger:
         return self._fallback_adjust(rma_results)
 
     def _model_predict(self, rma_results: list[RMAResult]) -> list[RMAResult]:
-        """Predict using trained CRF model."""
+        """Predict POS with the trained CRF model.
+
+        Confidence is the **marginal probability** of the predicted tag,
+        obtained from ``model.predict_marginals`` (sklearn-crfsuite). This is
+        a real per-token uncertainty estimate rather than the legacy
+        ``rma.confidence + 0.1`` heuristic, which left confidence detached
+        from the CRF's own belief. Honest marginal confidence is required by
+        the fallback mode (``Pipeline(fallback=True)``) to decide which
+        tokens to reroute to the neural tagger. If the stored estimator does
+        not expose ``predict_marginals`` (or it raises), we degrade
+        gracefully to the legacy heuristic.
+        """
         features = [self.extract_features(rma_results, i) for i in range(len(rma_results))]
+
+        marginals: list[dict] | None = None
+        if hasattr(self.model, "predict_marginals"):
+            try:
+                marginals = self.model.predict_marginals([features])[0]
+            except Exception:
+                marginals = None
+
         predictions = self.model.predict([features])[0]
 
         adjusted = []
-        for r, pred_pos in zip(rma_results, predictions):
+        for i, (r, pred_pos) in enumerate(zip(rma_results, predictions)):
+            if marginals is not None and i < len(marginals):
+                # Marginal probability of the predicted tag (in [0, 1]).
+                conf = float(marginals[i].get(pred_pos, 0.0))
+            else:
+                conf = min(r.confidence + 0.1, 1.0)
             adjusted.append(RMAResult(
                 token=r.token,
                 lemma=r.lemma,
                 pos=pred_pos,
                 suffixes=r.suffixes,
                 suffix_categories=r.suffix_categories,
-                confidence=min(r.confidence + 0.1, 1.0),
+                confidence=conf,
             ))
         return adjusted
 

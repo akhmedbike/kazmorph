@@ -58,6 +58,15 @@ HYBRID_NEURAL_FLOOR: float = 0.40
 # Active-learning confidence threshold (tokens below this are flagged for
 # human annotation). Used by the /low_confidence endpoint and the AL simulation.
 ACTIVE_LEARNING_THRESHOLD: float = 0.70
+
+# ── Hard neural fallback parameters (paper, config F) ─────────────────────────
+# The literature-endorsed alternative to confidence-weighted fusion/routing:
+# the CRF is the default POS source, and the neural tagger contributes ONLY for
+# tokens the CRF leaves unknown or low-confidence. This is the inverse of the
+# routed mode — the transformer never outvotes a confident CRF, it only fills
+# in where the CRF is unsure (see Discussion §5, "known anti-pattern").
+FALLBACK_CONF_THRESHOLD: float = 0.50
+FALLBACK_UNKNOWN_POS: tuple[str, ...] = ("UNK", "X", "")
 # Per-class overrides of the base fusion weights (paper Table 4 routing column).
 # Each entry replaces (w_FST, w_CRF, w_NN) for tokens of that error class.
 CLASS_WEIGHTS: dict[str, tuple[float, float, float]] = {
@@ -79,8 +88,10 @@ class Pipeline:
         lemma_model_path: str | None = None,
         *,
         routing: bool = False,
+        fallback: bool = False,
         mfrn_scoring: bool = False,
         fusion_weights: tuple[float, float, float] = DEFAULT_FUSION_WEIGHTS,
+        fallback_conf_threshold: float = FALLBACK_CONF_THRESHOLD,
     ):
         self.rma = ReverseMorphAnalyzer()
         self.crf = CRFTagger(model_path=crf_model_path)
@@ -91,6 +102,13 @@ class Pipeline:
         # error-class-conditioned weights (paper architecture). When False,
         # keep the legacy linear cascade.
         self.routing = routing
+        # When True, use the hard neural-fallback mode (config F): CRF is the
+        # default POS source; the neural tagger is taken only for tokens the
+        # CRF leaves unknown or low-confidence. Mutually exclusive with
+        # ``routing`` in practice (``fallback`` takes precedence if both set).
+        self.fallback = fallback
+        self.fallback_conf_threshold = fallback_conf_threshold
+        self.fallback_unknown_pos = FALLBACK_UNKNOWN_POS
         self.fusion_weights = fusion_weights
         # Warn once if no learned models are loaded: a bare Pipeline() runs as
         # RMA-only (the rule-based analyzer), which has different — and lower —
@@ -124,7 +142,9 @@ class Pipeline:
         # surface features the taxonomy scores from).
         rma_results = [self.rma.analyze(t) for t in tokens]
 
-        if self.routing:
+        if self.fallback:
+            final_results = self._process_fallback(rma_results)
+        elif self.routing:
             final_results = self._process_routed(rma_results)
         else:
             final_results = self._process_cascade(rma_results)
@@ -226,6 +246,52 @@ class Pipeline:
         # Lemma + MFRN run on the fused stream, identical to the cascade path.
         lemma_results = self.lemmatizer.tag(fused)
         return self.mfrn.apply(lemma_results)
+
+    # ------------------------------------------------------------------
+    # Hard neural fallback (paper config F)
+    # ------------------------------------------------------------------
+    def _process_fallback(self, rma_results: list[RMAResult]) -> list[RMAResult]:
+        """
+        Hard neural fallback — the literature-endorsed alternative to fusion.
+
+        The CRF is the default POS source (it is the strongest POS component
+        on this corpus). The neural tagger runs once on the whole sequence,
+        but its POS is taken ONLY for tokens the CRF leaves unknown
+        (UNK / X) or labels with marginal confidence below
+        ``fallback_conf_threshold``. On every other token the CRF decision
+        stands. This is the inverse of :meth:`_process_routed`: instead of
+        letting an over-confident transformer outvote a better-calibrated
+        CRF, the transformer only ever contributes where the CRF is unsure.
+
+        Lemma is taken from the RMA lexicon (the most accurate lemma source
+        on this corpus); the neural lemmatizer is intentionally NOT invoked
+        here, so that config F differs from config B (RMA+CRF) only in the
+        POS source — isolating the effect of the neural fallback.
+        """
+        crf_results = self.crf.tag(rma_results)
+        neural_results = self.neural.tag(crf_results)
+
+        fused: list[RMAResult] = []
+        for rma_r, crf_r, neu_r in zip(rma_results, crf_results, neural_results):
+            needs_neural = (
+                crf_r.pos in self.fallback_unknown_pos
+                or crf_r.confidence < self.fallback_conf_threshold
+            )
+            if needs_neural and neu_r.pos not in self.fallback_unknown_pos:
+                pos, conf = neu_r.pos, neu_r.confidence
+            else:
+                pos, conf = crf_r.pos, crf_r.confidence
+
+            fused.append(RMAResult(
+                token=rma_r.token,
+                lemma=rma_r.lemma,
+                pos=pos,
+                suffixes=rma_r.suffixes,
+                suffix_categories=rma_r.suffix_categories,
+                confidence=conf,
+            ))
+
+        return self.mfrn.apply(fused)
 
     @staticmethod
     def _weighted_vote(

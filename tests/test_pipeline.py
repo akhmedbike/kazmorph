@@ -463,3 +463,105 @@ class TestTokenization:
         # Sanity: two separate words with no hyphen stay separate
         toks = Pipeline._tokenize("жайлы сөз")
         assert toks == ["жайлы", "сөз"]
+
+
+# ============================================================
+#  Hard neural fallback (config F)
+# ============================================================
+class TestNeuralFallback:
+    """Verify that the fallback mode keeps the CRF POS on confident tokens and
+    takes the neural POS only where the CRF is unsure. Stubs the CRF and Neural
+    so the test is deterministic and needs no trained models."""
+
+    @staticmethod
+    def _stub_pipeline():
+        # Construct bare (RMA-only) then flip into fallback mode with stubs.
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            p = Pipeline()
+        p.fallback = True
+        p.fallback_conf_threshold = 0.50
+        return p
+
+    def test_confident_token_keeps_crf_pos(self):
+        p = self._stub_pipeline()
+
+        class StubCRF:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "NOUN", [], [], 0.90)]
+
+        class StubNeural:
+            def tag(self, rma):
+                # Neural says PROPN, but CRF is confident -> must be IGNORED.
+                return [RMAResult(rma[0].token, rma[0].lemma, "PROPN", [], [], 0.80)]
+
+        p.crf, p.neural = StubCRF(), StubNeural()
+        out = p.process("мектеп")
+        assert out[0]["pos"] == "NOUN"
+        assert out[0]["confidence"] == 0.90
+
+    def test_low_confidence_token_takes_neural_pos(self):
+        p = self._stub_pipeline()
+
+        class StubCRF:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "VERB", [], [], 0.20)]
+
+        class StubNeural:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "NOUN", [], [], 0.70)]
+
+        p.crf, p.neural = StubCRF(), StubNeural()
+        out = p.process("барды")
+        assert out[0]["pos"] == "NOUN"
+        assert out[0]["confidence"] == 0.70
+
+    def test_unknown_crf_pos_triggers_fallback(self):
+        p = self._stub_pipeline()
+
+        class StubCRF:
+            def tag(self, rma):
+                # CRF returns UNK with high-ish confidence; UNK still triggers.
+                return [RMAResult(rma[0].token, rma[0].lemma, "UNK", [], [], 0.95)]
+
+        class StubNeural:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "NOUN", [], [], 0.60)]
+
+        p.crf, p.neural = StubCRF(), StubNeural()
+        out = p.process("xyzqwerty")
+        assert out[0]["pos"] == "NOUN"
+
+    def test_neural_also_unknown_keeps_crf(self):
+        # If the neural also returns an unknown POS, fallback must not adopt it.
+        p = self._stub_pipeline()
+
+        class StubCRF:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "VERB", [], [], 0.10)]
+
+        class StubNeural:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "X", [], [], 0.55)]
+
+        p.crf, p.neural = StubCRF(), StubNeural()
+        out = p.process("барды")
+        assert out[0]["pos"] == "VERB"
+
+    def test_threshold_controls_boundary(self):
+        # With threshold 0.95, a CRF token at 0.90 becomes "low-confidence".
+        p = self._stub_pipeline()
+        p.fallback_conf_threshold = 0.95
+
+        class StubCRF:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "NOUN", [], [], 0.90)]
+
+        class StubNeural:
+            def tag(self, rma):
+                return [RMAResult(rma[0].token, rma[0].lemma, "VERB", [], [], 0.70)]
+
+        p.crf, p.neural = StubCRF(), StubNeural()
+        out = p.process("сөз")
+        assert out[0]["pos"] == "VERB"  # now overridden because 0.90 < 0.95

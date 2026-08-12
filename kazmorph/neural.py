@@ -36,6 +36,10 @@ class NeuralTagger:
         # Temperature for softmax calibration (T=1 = uncalibrated). Fitted by
         # scripts/calibrate.py to make confidence reflect real accuracy.
         self.temperature = 1.0
+        # Optional Region-Dependent TS: one temperature per confidence bin,
+        # chosen at inference by the uncalibrated max prob. When set, this
+        # overrides the scalar ``temperature``. See scripts/calibrate.py --mode.
+        self.region_temps: list[dict] | None = None
 
         if model_path and os.path.exists(os.path.join(model_path, "config.json")):
             self._load_model(model_path)
@@ -64,9 +68,17 @@ class NeuralTagger:
         if os.path.exists(calib_path):
             try:
                 with open(calib_path) as f:
-                    self.temperature = float(json.load(f).get("temperature", 1.0))
-            except (ValueError, OSError):
+                    payload = json.load(f)
+                if payload.get("mode") == "region":
+                    # Region-Dependent TS: list of {lo, hi, temperature}.
+                    self.region_temps = payload.get("regions")
+                    self.temperature = 1.0
+                else:
+                    self.temperature = float(payload.get("temperature", 1.0))
+                    self.region_temps = None
+            except (ValueError, OSError, TypeError):
                 self.temperature = 1.0
+                self.region_temps = None
 
     def tag(self, tokens: list[RMAResult]) -> list[RMAResult]:
         """Apply neural POS tagging or pass through (stub)."""
@@ -118,6 +130,21 @@ class NeuralTagger:
             self._predict_chunk(tokens, c_start, c_end)
         return tokens
 
+    def _calibrated_probs(self, logits: torch.Tensor) -> torch.Tensor:
+        """Softmax(logits / T), with T either a global scalar or per-token
+        (Region-Dependent TS, chosen by the uncalibrated max prob). Both leave
+        argmax unchanged. ``logits`` has shape (1, seq, num_labels)."""
+        if self.region_temps:
+            seq_logits = logits[0]                      # (seq, C)
+            raw = torch.softmax(seq_logits, dim=-1).max(dim=-1).values  # (seq,)
+            T = torch.ones_like(raw)
+            for reg in self.region_temps:
+                lo, hi, t = reg["lo"], reg["hi"], reg["temperature"]
+                mask = (raw > lo) & (raw <= hi)
+                T = torch.where(mask, torch.full_like(T, float(t)), T)
+            return torch.softmax(seq_logits / T.unsqueeze(-1), dim=-1).unsqueeze(0)
+        return torch.softmax(logits / self.temperature, dim=-1)
+
     def _predict_chunk(self, tokens: list[RMAResult], start: int, end: int) -> None:
         """Predict POS + confidence for tokens[start:end] in one forward pass."""
         chunk = tokens[start:end]
@@ -138,11 +165,12 @@ class NeuralTagger:
         with torch.no_grad():
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
             logits = outputs.logits
-            # Softmax with optional temperature calibration. The max softmax
-            # value is the model's real probability for the predicted tag —
-            # replacing the old heuristic (RMA confidence + 0.15) which left
-            # 77% of tokens stuck at 1.0 while real accuracy was 82%.
-            probs = torch.softmax(logits / self.temperature, dim=-1)
+            # Softmax with optional calibration. The max softmax value is the
+            # model's real probability for the predicted tag — replacing the
+            # old heuristic (RMA confidence + 0.15) which left 77% of tokens
+            # stuck at 1.0 while real accuracy was 82%. Two modes: scalar T
+            # (Guo 2017) or per-region T (RD-TS); both leave argmax unchanged.
+            probs = self._calibrated_probs(logits)
             predictions = probs.argmax(dim=-1)[0].tolist()
             max_probs = probs.max(dim=-1).values[0].tolist()
 

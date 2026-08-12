@@ -285,6 +285,12 @@ def benchmark_configs(conllu_path: str, *, out_path: str | None = None) -> list[
         ("Hybrid+routing", True,
          lambda: Pipeline(crf_model_path=crf, neural_model_path=neural,
                           lemma_model_path=lemma, routing=True)),
+        # F: hard neural fallback — neural tagger runs only for tokens the CRF
+        # leaves unknown/low-confidence. Lemma from RMA lexicon (no neural
+        # lemma), same as RMA+CRF, so POS is the only difference vs config B.
+        ("Hybrid+fallback", True,
+         lambda: Pipeline(crf_model_path=crf, neural_model_path=neural,
+                          fallback=True)),
     ]
 
     print("=" * 70)
