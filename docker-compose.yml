@@ -44,6 +44,11 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-claude}
       LLM_REVIEW_MODEL: ${LLM_REVIEW_MODEL:-claude-haiku-4-5}
       RAW_TEXT_RETENTION_DAYS: ${RAW_TEXT_RETENTION_DAYS:-7}
+      # Локальный LLM (LLM_PROVIDER=ollama). Внутри Docker «localhost» — сам
+      # контейнер, поэтому для Ollama на хосте нужен host.docker.internal
+      # (или адрес сервера Ollama в сети). На Linux может потребоваться
+      # extra_hosts: ["host.docker.internal:host-gateway"].
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
     volumes:
       # Модели в репозитории нет (gitignored) — кладём их в ./models/ на сервере.
       # Файлы: models/crf_model.joblib, models/neural_pos/.

@@ -78,6 +78,16 @@ Neural POS confidence is temperature-scaled on a dev set
 default the MFRN runs in diagnostic mode and leaves confidence intact, so the
 calibrated probabilities are preserved end-to-end.
 
+### Fully local analysis & pluggable reviewer
+
+The analysis pipeline (`/api/analyze`, `/api/v1/correct`) is **fully local** —
+it never calls any external service. The optional Active-Learning reviewer is a
+**pluggable** LLM: Claude (`LLM_PROVIDER=claude`) is just one example. Set
+`LLM_PROVIDER=ollama`, `LLM_REVIEW_MODEL=qwen2.5:7b`, and `OLLAMA_BASE_URL` to
+run the reviewer on a **local** model (Qwen + Ollama), free of charge and with
+zero external calls. Any OpenAI-compatible backend (Ollama, vLLM, LM Studio)
+works — no code changes needed (`kazmorph/llm_review/client.py`).
+
 ---
 
 ## Reproducing the results

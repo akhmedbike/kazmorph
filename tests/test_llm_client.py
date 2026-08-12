@@ -333,3 +333,144 @@ class TestReviewSentenceTokens:
         assert len(results) == 2
         assert all(r.verdict == "correct" for r in results)
         assert reviewer.stats.n_calls == 2
+
+
+# ============================================================
+#  Локальный провайдер Ollama (OpenAI-совместимый endpoint)
+# ============================================================
+
+
+class _FakeUsageOA(SimpleNamespace):
+    """Имитация resp.usage из OpenAI SDK."""
+
+
+class _FakeMessageOA(SimpleNamespace):
+    pass
+
+
+class _FakeChoiceOA(SimpleNamespace):
+    pass
+
+
+class _FakeRespOA(SimpleNamespace):
+    """Имитация объекта ответа chat.completions.create."""
+
+
+class _FakeCompletions:
+    """Записывает вызовы и возвращает предзаготовленный ответ."""
+
+    def __init__(self, raw: str, in_tok: int = 120, out_tok: int = 40):
+        self._raw = raw
+        self._in_tok = in_tok
+        self._out_tok = out_tok
+        self.calls: list[dict] = []
+
+    def create(self, **kwargs):  # noqa: ANN003 — имитация SDK-сигнатуры
+        self.calls.append(kwargs)
+        return _FakeRespOA(
+            choices=[_FakeChoiceOA(message=_FakeMessageOA(content=self._raw))],
+            usage=_FakeUsageOA(prompt_tokens=self._in_tok, completion_tokens=self._out_tok),
+        )
+
+
+class _FakeChat:
+    def __init__(self):
+        self.completions = _FakeCompletions(raw="")
+
+
+class _FakeOpenAI:
+    """Подмена класса openai.OpenAI: отдаёт _FakeChat."""
+
+    instances: list[_FakeOpenAI] = []
+
+    def __init__(self, **kwargs):  # noqa: ANN003
+        self.kwargs = kwargs
+        self.chat = _FakeChat()
+        _FakeOpenAI.instances.append(self)
+
+    @classmethod
+    def reset(cls) -> None:
+        cls.instances = []
+
+    @classmethod
+    def last(cls) -> _FakeOpenAI:
+        return cls.instances[-1]
+
+
+@pytest.fixture
+def fake_openai(monkeypatch):
+    """Подменить модуль openai так, чтобы OpenAI() возвращал фейк."""
+    _FakeOpenAI.reset()
+    monkeypatch.setattr(llm_client, "_reviewer_singleton", None, raising=False)
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.delenv("LLM_REVIEW_MODEL", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    # monkeypatch модуля openai: _make_client делает import openai внутри —
+    # подменяем sys.modules.
+    import sys
+
+    fake_module = SimpleNamespace(OpenAI=_FakeOpenAI)
+    monkeypatch.setitem(sys.modules, "openai", fake_module)
+    yield _FakeOpenAI
+    _FakeOpenAI.reset()
+
+
+def _make_reviewer_ollama(fake_openai, reply: str, **usage) -> LLMReviewer:
+    """Создать LLMReviewer (провайдер ollama) и задать ответ фейка."""
+    r = LLMReviewer()
+    c = fake_openai.last().chat.completions
+    c._raw = reply
+    if usage:
+        c._in_tok = usage.get("in_tok", 120)
+        c._out_tok = usage.get("out_tok", 40)
+    return r
+
+
+class TestOllamaProvider:
+    def test_creates_without_api_key(self, fake_openai):
+        # Локальный провайдер не требует ключа — RuntimeError быть не должно.
+        reviewer = LLMReviewer()
+        assert reviewer.provider == "ollama"
+        assert reviewer.model == "qwen2.5:7b"  # дефолт
+
+    def test_uses_openai_chat_completions(self, fake_openai):
+        reviewer = _make_reviewer_ollama(
+            fake_openai, '{"verdict":"correct","explanation":"ок"}'
+        )
+        result = reviewer.review_token("с", "т", "л", "NOUN")
+        # Вызов шёл через chat.completions.create (openai-путь).
+        call = fake_openai.last().chat.completions.calls[-1]
+        assert call["model"] == "qwen2.5:7b"
+        assert call["max_tokens"] == llm_client.MAX_OUTPUT_TOKENS
+        # System + user roles присутствуют.
+        roles = [m["role"] for m in call["messages"]]
+        assert roles == ["system", "user"]
+
+    def test_parses_verdict_and_zero_cost(self, fake_openai):
+        # Локальная модель — цена 0, cost_usd всегда 0.
+        reviewer = _make_reviewer_ollama(
+            fake_openai,
+            '{"verdict":"incorrect","corrected_lemma":"құқық",'
+            '"corrected_pos":"noun","explanation":"чередование"}',
+        )
+        result = reviewer.review_token("...құқығы...", "құқығы", "құқы", "NOUN")
+        assert result.verdict == "incorrect"
+        assert result.corrected_lemma == "құқық"
+        assert result.corrected_pos == "NOUN"
+        assert result.provider == "ollama"
+        assert result.cost_usd == 0.0
+        assert result.input_tokens == 120
+        assert result.output_tokens == 40
+
+    def test_base_url_passed_to_client(self, fake_openai, monkeypatch):
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://my-host:1234/v1")
+        llm_client.reset_reviewer()
+        LLMReviewer()
+        kwargs = _FakeOpenAI.last().kwargs
+        assert kwargs["base_url"] == "http://my-host:1234/v1"
+
+    def test_custom_model_override(self, fake_openai, monkeypatch):
+        monkeypatch.setenv("LLM_REVIEW_MODEL", "qwen2.5:14b")
+        llm_client.reset_reviewer()
+        reviewer = LLMReviewer()
+        assert reviewer.model == "qwen2.5:14b"

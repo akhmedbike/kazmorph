@@ -29,14 +29,25 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # ── Провайдеры и модели ─────────────────────────────────────────────────────
+# Каждый провайдер описывает:
+#   sdk          — call-path: "anthropic" (messages.create) или "openai"
+#                  (chat.completions.create, любой OpenAI-совместимый endpoint).
+#   requires_key — нужен ли ключ API (False для локального Ollama).
+#   api_key_env  — имя env-переменной с ключом (None, если ключ не нужен).
+#   base_url_env/default_base_url — только для openai-sdk провайдеров
+#                  (куда стучаться; по умолчанию локальный Ollama).
+#   default_model — модель по умолчанию (перекрывается LLM_REVIEW_MODEL).
+#   price_in/out_per_mtok — USD за 1 млн токенов, для оценки расхода (0 = локально).
+#
 # Claude Haiku 4.5: $1/$5 за млн токенов (in/out), 200k контекст — оптимальный
 # выбор для cost-sensitive классификации разборов. Aliases подтверждены в
 # docs.anthropic.com (2026).
 PROVIDER_CONFIG: dict[str, dict[str, Any]] = {
     "claude": {
+        "sdk": "anthropic",
+        "requires_key": True,
         "api_key_env": "ANTHROPIC_API_KEY",
         "default_model": "claude-haiku-4-5",
-        # USD за 1 млн токенов (input, output) — для оценки расхода.
         "price_in_per_mtok": 1.0,
         "price_out_per_mtok": 5.0,
     },
@@ -44,10 +55,26 @@ PROVIDER_CONFIG: dict[str, dict[str, Any]] = {
     # ZAI_API_KEY (НЕ GLM Coding Plan). Anthropic-совместимый ли endpoint
     # standalone Z.ai API — проверяется отдельно при активации.
     "glm": {
+        "sdk": "anthropic",
+        "requires_key": True,
         "api_key_env": "ZAI_API_KEY",
         "default_model": "glm-4.5",
         "price_in_per_mtok": 0.5,
         "price_out_per_mtok": 0.5,
+    },
+    # Локальный LLM через Ollama (OpenAI-совместимый endpoint /v1).
+    # Ключ не нужен; цена 0 (считает на вашем железе). base_url можно
+    # перенаправить на любой OpenAI-совместимый сервер (vLLM, LM Studio,
+    # llama.cpp) — провайдер от этого не меняется.
+    "ollama": {
+        "sdk": "openai",
+        "requires_key": False,
+        "api_key_env": None,
+        "base_url_env": "OLLAMA_BASE_URL",
+        "default_base_url": "http://localhost:11434/v1",
+        "default_model": "qwen2.5:7b",
+        "price_in_per_mtok": 0.0,
+        "price_out_per_mtok": 0.0,
     },
 }
 
@@ -151,24 +178,48 @@ class LLMReviewer:
             )
         cfg = PROVIDER_CONFIG[provider]
         self.provider = provider
+        self._sdk = cfg.get("sdk", "anthropic")
         self.model = model or os.getenv("LLM_REVIEW_MODEL") or cfg["default_model"]
         self._price_in = cfg["price_in_per_mtok"]
         self._price_out = cfg["price_out_per_mtok"]
-        key_env = cfg["api_key_env"]
-        self.api_key = api_key or os.environ.get(key_env, "")
-        if not self.api_key:
-            raise RuntimeError(
-                f"Не задан {key_env}. Добавьте ключ в .env "
-                f"(провайдер={provider})."
+
+        # Ключ API требуется не всем провайдерам (Ollama локальный — без ключа).
+        if cfg.get("requires_key", True):
+            key_env = cfg["api_key_env"]
+            self.api_key = api_key or os.environ.get(key_env, "")
+            if not self.api_key:
+                raise RuntimeError(
+                    f"Не задан {key_env}. Добавьте ключ в .env "
+                    f"(провайдер={provider})."
+                )
+        else:
+            # Локальные OpenAI-совместимые серверы ключ не проверяют, но
+            # openai-SDK требует непустую строку — отдаём фиктивную.
+            self.api_key = api_key or "local"
+
+        # base_url — только для openai-sdk провайдеров (куда стучаться).
+        self._base_url: str | None = None
+        if "base_url_env" in cfg:
+            self._base_url = os.environ.get(
+                cfg["base_url_env"], cfg["default_base_url"]
             )
+
         self.timeout = timeout
         self.stats = _Stats()
-        # Ленивый импорт: если anthropic не установлен, модуль всё равно
+        # Ленивый импорт: если anthropic/openai не установлен, модуль всё равно
         # импортируется (нужно для чтения ReviewResult в других местах).
         self._client = self._make_client()
 
     def _make_client(self):
-        if self.provider == "claude":
+        # GLM-заглушка сохранена ради явной ошибки и теста (см. test_llm_client).
+        if self.provider == "glm":
+            # TODO: активировать при появлении ZAI_API_KEY (pay-per-token).
+            raise NotImplementedError(
+                "GLM-провайдер не активирован. Нужен отдельный pay-per-token "
+                "ключ ZAI_API_KEY (не GLM Coding Plan) и сверка совместимости "
+                "endpoint'а с docs.z.ai."
+            )
+        if self._sdk == "anthropic":
             try:
                 import anthropic
             except ImportError as exc:  # pragma: no cover
@@ -176,15 +227,20 @@ class LLMReviewer:
                     "Пакет anthropic не установлен. Установите: pip install anthropic"
                 ) from exc
             return anthropic.Anthropic(api_key=self.api_key, timeout=self.timeout)
-        if self.provider == "glm":
-            # TODO: активировать при появлении ZAI_API_KEY (pay-per-token).
-            # Пока — явная ошибка, чтобы не дойти до продакшена с заглушкой.
-            raise NotImplementedError(
-                "GLM-провайдер не активирован. Нужен отдельный pay-per-token "
-                "ключ ZAI_API_KEY (не GLM Coding Plan) и сверка совместимости "
-                "endpoint'а с docs.z.ai."
+        if self._sdk == "openai":
+            try:
+                import openai
+            except ImportError as exc:  # pragma: no cover
+                raise RuntimeError(
+                    "Пакет openai не установлен. Установите: pip install openai "
+                    "(нужен для ollama/local провайдера LLM_REVIEW)."
+                ) from exc
+            return openai.OpenAI(
+                api_key=self.api_key,
+                base_url=self._base_url,
+                timeout=self.timeout,
             )
-        raise ValueError(f"Провайдер {self.provider!r} не реализован")
+        raise ValueError(f"Провайдер {self.provider!r} (sdk={self._sdk!r}) не реализован")
 
     # ── Публичный API ───────────────────────────────────────────────────────
 
@@ -257,7 +313,19 @@ class LLMReviewer:
     # ── Внутреннее ──────────────────────────────────────────────────────────
 
     def _call_llm(self, user_prompt: str) -> tuple[str, dict[str, int]]:
-        """Один вызов API. Возвращает (сырой текст ответа, usage)."""
+        """Один вызов API. Возвращает (сырой текст ответа, usage).
+
+        Диспетчер по self._sdk: anthropic (messages.create) или openai
+        (chat.completions.create — Ollama и любой OpenAI-совместимый сервер).
+        """
+        if self._sdk == "anthropic":
+            return self._call_anthropic(user_prompt)
+        if self._sdk == "openai":
+            return self._call_openai(user_prompt)
+        raise ValueError(f"Неизвестный sdk={self._sdk!r}")
+
+    def _call_anthropic(self, user_prompt: str) -> tuple[str, dict[str, int]]:
+        """Вызов через Anthropic SDK (messages.create)."""
         resp = self._client.messages.create(
             model=self.model,
             max_tokens=MAX_OUTPUT_TOKENS,
@@ -275,6 +343,32 @@ class LLMReviewer:
         usage = {
             "input_tokens": getattr(resp.usage, "input_tokens", 0) or 0,
             "output_tokens": getattr(resp.usage, "output_tokens", 0) or 0,
+        }
+        return raw, usage
+
+    def _call_openai(self, user_prompt: str) -> tuple[str, dict[str, int]]:
+        """Вызов через OpenAI-совместимый endpoint (Ollama /v1, vLLM, LM Studio).
+
+        Локальные серверы могут не возвращать usage — тогда считаем 0
+        (для Ollama цена и так 0, так что cost = 0).
+        """
+        resp = self._client.chat.completions.create(
+            model=self.model,
+            max_tokens=MAX_OUTPUT_TOKENS,
+            messages=[
+                {"role": "system", "content": _REVIEW_SYSTEM},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+        raw = ""
+        choices = getattr(resp, "choices", None) or []
+        if choices:
+            msg = getattr(choices[0], "message", None)
+            raw = (getattr(msg, "content", None) or "").strip()
+        usage_obj = getattr(resp, "usage", None)
+        usage = {
+            "input_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
+            "output_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
         }
         return raw, usage
 

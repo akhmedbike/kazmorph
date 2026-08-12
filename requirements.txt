@@ -25,9 +25,12 @@ itsdangerous>=2.1
 
 # Active Learning (LLM-ревьюер + RSS-харвестер)
 # anthropic — Claude API для проверки морфоразборов (teacher-модель в схеме
-#   weak supervision). Только для runtime-агента, не для разработки
-#   (разработка идёт через GLM Coding Plan в ZCode).
+#   weak supervision).
 anthropic>=0.40
+# openai — клиент для ЛОКАЛЬНОГО LLM-ревьюера через Ollama (LLM_PROVIDER=ollama,
+#   OpenAI-совместимый endpoint /v1). Ленивый импорт — нужен только при
+#   использовании ollama-провайдера; с claude можно не ставить.
+openai>=2.0.0
 # feedparser — RSS-ленты госсайтов (inform.kz и др.).
 feedparser>=6.0
 # trafilatura — извлечение основного текста из HTML (для источников без RSS).
