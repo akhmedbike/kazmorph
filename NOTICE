@@ -1,0 +1,75 @@
+NOTICE
+======
+
+This project is licensed under the MIT License (see LICENSE). The following
+third-party and adapted components carry additional attribution obligations.
+
+
+1. conll18_ud_eval.py  —  MPL-2.0  (file-level copyleft)
+--------------------------------------------------------
+File: kazmorph/third_party/conll18_ud_eval.py
+
+The official CoNLL 2018 / Universal Dependencies evaluation script, vendored
+verbatim and unmodified.
+
+  Copyright 2017, 2018 Institute of Formal and Applied Linguistics (UFAL),
+  Faculty of Mathematics and Physics, Charles University, Czech Republic.
+
+  Authors: Milan Straka, Martin Popel <surname@ufal.mff.cuni.cz>
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+Because MPL-2.0 is file-level copyleft, this file remains MPL-2.0 even within
+the otherwise-MIT kazmorph project. Any modification to it must preserve the
+MPL header and the source-disclosure obligations of the license. The thin
+MIT-licensed adapter that calls it lives at kazmorph/official_eval.py.
+
+
+2. Correction subsystem  —  adapted from IHCONCS_2026_paper (MIT)
+-----------------------------------------------------------------
+Files: kazmorph/correction/*.py
+  - correction_metrics.py
+  - keyboards.py
+  - corrupt.py
+  - freq.py
+  - candidate_generator.py
+  - corrector_3way.py
+  - __init__.py
+
+The three-way KEEP/CORRECT/REVIEW corrector, the four-mode candidate generator
+(with stem recombination), the nine-operator controlled-error generator, the
+correction-quality metrics (FCR, CER, WER, Recall@K, MRR, risk–coverage), and
+the leakage-free corpus frequency dictionary were adapted from the
+IHCONCS_2026_paper project (MIT License).
+
+These modules are MIT-licensed as part of kazmorph. Adaptations were limited
+to import-path fixes and replacing the source project's ``config`` module with
+module-level constants; the decision logic and metrics are functionally
+unchanged.
+
+
+3. Cross-validation and significance testing  —  adapted from CAGF-CBT-CRF (MIT)
+-------------------------------------------------------------------------------
+Files:
+  - kazmorph/cv.py            (leakage-free k-fold CV: stratified + grouped)
+  - kazmorph/significance.py  (Wilcoxon, Cohen's d, Holm-Bonferroni, bootstrap CI)
+
+The fold-construction logic (LPT block scheduling, jack-knife invariants,
+self-contained deterministic PRNG) and the paired significance-testing
+functions were adapted from the CAGF-CBT-CRF project (MIT License).
+
+These modules are MIT-licensed as part of kazmorph. For cv.py the adaptation
+was reading ``sent_id`` from kazmorph's Sentence attribute instead of CoNLL-U
+comment lines; for significance.py the CLI was dropped and scipy is now
+imported lazily so the pure functions work without it.
+
+
+4. enable_determinism  —  adapted from IHCONCS_2026_paper (MIT)
+---------------------------------------------------------------
+File: kazmorph/device.py (the enable_determinism function only)
+
+The ``enable_determinism`` helper was adapted from the IHCONCS_2026_paper
+project (MIT). The pre-existing ``pick_device`` function in the same file is
+original kazmorph code.

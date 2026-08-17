@@ -63,6 +63,12 @@ skipped and a bare `Pipeline()` runs RMA-only with a warning.
 - **Routed** (`routing=True`) — all POS components run, the per-token error
   class is computed, and the final POS/confidence is a confidence-weighted
   vote across RMA/CRF/Neural using per-class weights (`CLASS_WEIGHTS`).
+- **Fallback** (`fallback=True`, ablation F) — CRF is the default POS source;
+  the neural tagger contributes only for tokens the CRF leaves unknown or
+  labels below `fallback_conf_threshold` (τ = 0.50, selected on dev). Lemma
+  stays with the RMA lexicon, so F differs from RMA+CRF only in the POS
+  source. Evaluate with `scripts/evaluate.py --config fallback
+  --fallback-threshold T`.
 
 ### Correction layer
 
@@ -94,35 +100,42 @@ works — no code changes needed (`kazmorph/llm_review/client.py`).
 
 All metrics below are measured on the held-out `data/test.conllu` (162
 sentences, 1594 tokens) after a silver-to-test **decontamination** step that
-removed 127 exact-duplicate sentences. Bootstrap 95% CIs use 2000 iterations;
+removed 127 exact-duplicate sentences. Bootstrap 95% CIs use 10,000 iterations;
 pairwise comparisons use McNemar's test (α = 0.05).
 
 ```bash
-python scripts/evaluate.py          # POS/lemma accuracy, CI, McNemar, ablations A–E
+python scripts/evaluate.py          # POS/lemma accuracy, CI, McNemar, ablations A–F
 python scripts/benchmark.py         # per-stage coverage and confidence
+python scripts/benchmark.py --configs  # throughput/RAM per configuration (Table 7)
 ```
 
 ### Results
 
 | Configuration | POS Acc | 95% CI | Lemma | Macro-F1 | W-F1 |
 |---|---:|:---:|---:|---:|---:|
-| **A** RMA-only (lexicon) | 92.53% | [91.28, 93.79] | 95.04% | 0.8083 | 0.9258 |
-| **B** RMA + CRF | **93.10%** | [91.84, 94.29] | 95.04% | **0.8853** | **0.9310** |
-| **C** RMA + Neural | 89.08% | [87.52, 90.59] | 90.84% | 0.8079 | 0.8898 |
-| **D** Hybrid (cascade) | 89.08% | [87.52, 90.59] | 90.84% | 0.8079 | 0.8898 |
-| **E** Hybrid + routing | 89.34% | [87.83, 90.84] | 90.84% | 0.8174 | 0.8925 |
+| **A** RMA-only (lexicon) | 92.53% | [91.22, 93.79] | 95.04% | 0.8083 | 0.9258 |
+| **B** RMA + CRF | **93.10%** | [91.84, 94.35] | **95.04%** | **0.8853** | **0.9310** |
+| **C** RMA + Neural | 89.02% | [87.52, 90.53] | 94.10% | 0.8014 | 0.8888 |
+| **D** Hybrid (cascade) | 89.02% | [87.52, 90.53] | 94.10% | 0.8014 | 0.8888 |
+| **E** Hybrid + routing | 89.46% | [87.95, 90.97] | 94.10% | 0.8127 | 0.8931 |
+| **F** Hybrid + fallback | 92.85% | [91.59, 94.10] | 95.04% | 0.8748 | 0.9265 |
 
 ### Key findings
 
 1. **CRF outperforms the neural tagger on POS** under an honest,
-   decontaminated evaluation: RMA+CRF (93.10%) beats RMA+Neural (89.08%) by
-   ~4 points and is ~57× faster. The difference is statistically significant
-   (McNemar χ² = 24.5, p = 10⁻⁶).
-2. **The neural model adds a better lemmatizer** (90.84% vs. RMA's lexicon
-   lookup), motivating the hybrid RMA+CRF (POS) + Neural (lemma) configuration.
-3. **Routing (D vs. E) is a small, non-significant gain** (+0.26 pp, p = 0.13)
-   on 1594 tokens — reported as a limitation.
-4. Prior silver-augmented runs that reported POS ≈ 95% were **contaminated**
+   decontaminated evaluation: RMA+CRF (93.10%) beats RMA+Neural (89.02%) by
+   ~4.1 points and is ~29× faster (4,189 vs 143 tok/s on CPU). The difference
+   is statistically significant (McNemar χ² = 26.43, p < 10⁻⁶).
+2. **The RMA lexicon also beats the neural lemmatizer** (95.04% vs 94.10%),
+   so the recommended configuration B is best on both POS and lemma.
+3. **Routing (D vs. E) is a small gain that does not survive multiple-comparison
+   correction** (+0.44 pp, p = 0.023 nominal, not significant after Holm
+   correction over the 15 pairwise tests) — reported as a limitation.
+4. **Hard neural fallback (F) does not improve on CRF-only** (92.85% vs
+   93.10%, p = 0.34): the neural tagger is consulted for only ~1% of tokens
+   (τ = 0.50) and converts 3 CRF errors into correct tags while introducing 7
+   new ones — reinforcing the low-resource thesis.
+5. Prior silver-augmented runs that reported POS ≈ 95% were **contaminated**
    by sentence overlap between silver data and the test split; closing that
    leak dropped neural POS by 5.7 points.
 

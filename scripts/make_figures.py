@@ -54,6 +54,7 @@ CONFIG_COLORS = {
     "[C] RMA+Neural": "#10b981",
     "[D] Hybrid (cascade)": "#f59e0b",
     "[E] Hybrid+routing": "#ef4444",
+    "[F] RMA+CRF+Neural-fallback": "#8b5cf6",
 }
 CLASS_COLORS = {
     "BOR": "#ef4444", "AFC": "#f59e0b", "SEG": "#10b981",
@@ -81,6 +82,78 @@ def _save(fig, out_dir: str, name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
+
+def fig_architecture(out_dir: str) -> None:
+    """Fig 1: five-stage pipeline architecture with the three operating modes."""
+    fig, ax = plt.subplots(figsize=(9.2, 5.8))
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 6.6)
+    ax.axis("off")
+
+    def box(x, y, w, h, text, fc="#f8fafc", ec="#334155", fs=7.6, bold=False):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.05",
+                                    fc=fc, ec=ec, lw=1.1))
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center",
+                fontsize=fs, fontweight="bold" if bold else "normal")
+
+    def arrow(x1, y1, x2, y2, ls="-", color="#334155"):
+        ax.add_patch(FancyArrowPatch((x1, y1), (x2, y2), arrowstyle="-|>",
+                                     mutation_scale=10, color=color, lw=1.0,
+                                     linestyle=ls, shrinkA=2, shrinkB=2))
+
+    # ── Input / tokenizer / Stage 1 ──────────────────────────────────────
+    box(0.15, 5.85, 1.5, 0.55, "Input text\n(Kazakh)", fc="#eef2ff")
+    box(2.0, 5.85, 1.7, 0.55, "Tokenizer\n(script-aware)")
+    box(4.05, 5.85, 3.1, 0.55, "Stage 1 · RMA\nreverse-Trie, 151 affixes, lexicons",
+        fc="#eef2ff", bold=True)
+    arrow(1.65, 6.12, 2.0, 6.12)
+    arrow(3.7, 6.12, 4.05, 6.12)
+    # Taxonomy side-signal from RMA
+    box(7.5, 5.85, 2.35, 0.55, "Error taxonomy\nBOR/AFC/SEG/AGR/NONE",
+        fc="#fef3c7", ec="#b45309")
+
+    # ── Three operating modes (Stage 2/3 POS decision) ───────────────────
+    modes = [
+        ("Cascade (default)\nconfigs C–D", "#ecfdf5", "#059669",
+         "Neural POS overrides;\nCRF bypassed when a\nneural model is loaded"),
+        ("Routed (routing=True)\nconfig E", "#eff6ff", "#2563eb",
+         "Confidence-weighted vote\nRMA+CRF+Neural; weights\nper error class (Table 4)"),
+        ("Fallback (fallback=True)\nconfig F", "#f5f3ff", "#7c3aed",
+         "CRF default POS; Neural\nonly if UNK/X or marginal\nconfidence < τ = 0.50"),
+    ]
+    xs = [0.4, 3.55, 6.7]
+    for (title, fc, ec, body), x in zip(modes, xs):
+        ax.add_patch(FancyBboxPatch((x, 3.9), 2.85, 1.35,
+                                    boxstyle="round,pad=0.05", fc=fc, ec=ec, lw=1.2))
+        ax.text(x + 1.425, 5.02, title, ha="center", va="center",
+                fontsize=7.4, fontweight="bold")
+        ax.text(x + 1.425, 4.38, body, ha="center", va="center", fontsize=6.8)
+        arrow(5.6, 5.85, x + 1.425, 5.25)
+
+    # ── POS / lemma row ──────────────────────────────────────────────────
+    box(0.4, 2.75, 4.35, 0.6, "POS decision  $p_i$  (per mode)", fc="#eef2ff", bold=True)
+    box(5.3, 2.75, 4.35, 0.6, "Lemma  $l_i$:  neural lemmatizer (C–E)\n|  RMA lexicon (A, B, F)")
+    for x in xs:
+        arrow(x + 1.425, 3.9, 2.6 if x + 1.425 < 4.7 else 5.6, 3.35)
+    arrow(4.75, 3.05, 5.3, 3.05)
+
+    # ── Stage 4 / output ─────────────────────────────────────────────────
+    box(0.4, 1.55, 9.25, 0.6, "Stage 4 · MFRN — 64 phonological constraints, 8 groups (diagnostic scoring)",
+        fc="#eef2ff", bold=True)
+    arrow(2.6, 2.75, 2.6, 2.15)
+    arrow(7.5, 2.75, 7.5, 2.15)
+    box(0.4, 0.35, 9.25, 0.7,
+        "Output  $\\hat{y}_i = (p_i,\\ l_i,\\ e_i,\\ c_i)$   —   UPOS tag, lemma, error class, confidence",
+        fc="#fef9c3", ec="#a16207", bold=True)
+    arrow(5.0, 1.55, 5.0, 1.05)
+    # Taxonomy feeds routing + output error class
+    arrow(8.65, 5.85, 8.65, 5.25, ls="--", color="#b45309")
+    arrow(8.65, 5.85, 9.55, 1.05, ls="--", color="#b45309")
+
+    _save(fig, out_dir, "fig1_architecture.png")
+
 
 def fig_class_distribution(metrics: dict, test_file: str, out_dir: str) -> None:
     """Fig 2: token distribution by UPOS and predicted error class."""
@@ -280,6 +353,7 @@ def main() -> int:
         return 1
 
     print(f"Generating figures into {out_dir} ...")
+    fig_architecture(out_dir)
     fig_class_distribution(metrics, args.test_file, out_dir)
     fig_ablation_macrof1(metrics, out_dir)
     fig_accuracy_by_category(metrics, out_dir)

@@ -12,6 +12,15 @@ torch>=2.0.0
 transformers>=4.30.0
 datasets>=2.14.0
 seqeval>=1.2.2
+# sentencepiece — mt5 tokenizer for the alternative seq2seq lemmatizer
+# (kazmorph/neural_lemma_seq2seq.py, scripts/train_lemma_seq2seq.py; its test
+# suite hard-imports it).
+sentencepiece>=0.1.99
+
+# ML (Evaluation — paired significance testing)
+# Требуется только kazmorph.significance.paired_test (t-test, Wilcoxon).
+# Чистые функции (Cohen's d, Holm-Bonferroni, bootstrap CI) работают без scipy.
+scipy>=1.10
 
 # Utilities
 python-multipart>=0.0.6

@@ -3,7 +3,8 @@ REST API v1 — интеграционные эндпоинты для стор�
 Этап 4: единая интегрированная система; Этап 5: доступ пользователей).
 
 Эндпоинты:
-  POST /api/v1/correct        — исправить текст (главная фича «корректора»)
+  POST /api/v1/correct        — исправить текст (бинарный корректор, главная фича)
+  POST /api/v1/correct3       — трёхсторонний корректор KEEP/CORRECT/REVIEW
   POST /api/v1/analyze/batch  — пакетный анализ нескольких текстов
   POST /api/v1/evaluate       — оценить качество разметки (ЧАСТЬ A как сервис)
   GET  /api/v1/info           — метаданные сервиса (этапы, модели, лексикон)
@@ -20,9 +21,15 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from kazmorph.corrector import correct
+from kazmorph.corrector import correct, _TOKEN_RE
 from kazmorph.evaluation import QualityReport, parse_conllu_string
 from kazmorph.pipeline import Pipeline
+from kazmorph.correction.corrector_3way import (
+    correct_sentence_3way,
+    TAU_E as _3W_TAU_E,
+    TAU_C as _3W_TAU_C,
+    TAU_M as _3W_TAU_M,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["integration-v1"])
 
@@ -67,6 +74,21 @@ class CorrectRequest(BaseModel):
     confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
+class Correct3Request(BaseModel):
+    """Запрос к трёхстороннему корректору KEEP/CORRECT/REVIEW."""
+    text: str
+    tau_e: float = Field(default=_3W_TAU_E, ge=0.0, le=1.0,
+                         description="Порог p_err: ниже — KEEP (тронуто не будет).")
+    tau_c: float = Field(default=_3W_TAU_C, ge=0.0, le=1.0,
+                         description="Вероятность топ-кандидата должна достичь этого для CORRECT.")
+    tau_m: float = Field(default=_3W_TAU_M, ge=0.0, le=1.0,
+                         description="Зазор топ-кандидат − второй должен достичь этого для CORRECT.")
+    candidate_mode: str = Field(
+        default="dl_fst_filter",
+        description="Режим генерации кандидатов: dl | dl_freq | dl_fst_filter | dl_freq_morph.",
+    )
+
+
 class BatchRequest(BaseModel):
     texts: list[str] = Field(..., min_length=1)
 
@@ -93,6 +115,86 @@ def correct_text(
     (Levenshtein), форматирование сохраняется.
     """
     return correct(pipeline, req.text, req.confidence_threshold)
+
+
+@router.post("/correct3", summary="Трёхсторонний корректор (KEEP/CORRECT/REVIEW)")
+def correct_text_3way(
+    req: Correct3Request,
+    pipeline: Pipeline = Depends(get_pipeline),
+    _: bool = Depends(require_api_key),
+) -> dict:
+    """Анализирует текст и принимает по каждому токену одно из трёх решений:
+
+      * KEEP    — высокая уверенность, токен оставлен как есть;
+      * CORRECT — найден надёжный кандидат, токен заменён;
+      * REVIEW  — токен подозрителен, но кандидаты недостаточно уверены;
+                   оригинал сохраняется, кандидаты возвращаются для проверки.
+
+    Возвращает исправленный текст (применены только CORRECT-решения, пробелы
+    и пунктуация сохранены), список решений с доказательствами и сводку
+    статистики. В отличие от бинарного /correct, REVIEW никогда не портит
+    сомнительные, но возможно-правильные формы (нижний FCR на чистом тексте).
+    """
+    decisions = correct_sentence_3way(
+        pipeline, req.text,
+        tau_e=req.tau_e, tau_c=req.tau_c, tau_m=req.tau_m,
+        candidate_mode=req.candidate_mode,
+    )
+
+    # Реконструкция строки с сохранением пробелов/пунктуации (тот же подход,
+    # что и в kazmorph.corrector.correct): между токенами переносим исходный
+    # текст дословно, а сам токен заменяем только при decision == CORRECT.
+    matches = list(_TOKEN_RE.finditer(req.text))
+    out_parts: list[str] = []
+    last_end = 0
+    n = min(len(decisions), len(matches))
+    n_keep = n_correct = n_review = 0
+    decision_rows: list[dict] = []
+
+    for i in range(n):
+        m = matches[i]
+        d = decisions[i]
+        out_parts.append(req.text[last_end:m.start()])
+        last_end = m.end()
+
+        emitted = d.predicted  # == token на KEEP/REVIEW, кандидат на CORRECT
+        out_parts.append(emitted)
+
+        if d.decision == "KEEP":
+            n_keep += 1
+        elif d.decision == "CORRECT":
+            n_correct += 1
+        else:
+            n_review += 1
+
+        decision_rows.append({
+            "position": m.start(),
+            "token": d.token,
+            "predicted": emitted,
+            "decision": d.decision,
+            "pos": d.pos,
+            "confidence": d.confidence,
+            "p_err": d.p_err,
+            "top_candidate": d.top_candidate,
+            "top_prob": d.top_prob,
+            "margin": d.margin,
+            "n_candidates": d.n_candidates,
+            "candidates": [{"word": w, "prob": p} for w, p in d.candidates[:5]],
+        })
+
+    out_parts.append(req.text[last_end:])
+
+    return {
+        "original": req.text,
+        "corrected": "".join(out_parts),
+        "decisions": decision_rows,
+        "stats": {
+            "tokens": len(decisions),
+            "keep": n_keep,
+            "correct": n_correct,
+            "review": n_review,
+        },
+    }
 
 
 @router.post("/analyze/batch", summary="Пакетный анализ текстов")

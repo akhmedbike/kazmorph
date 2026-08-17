@@ -269,18 +269,26 @@ class Pipeline:
         POS source — isolating the effect of the neural fallback.
         """
         crf_results = self.crf.tag(rma_results)
+        # Snapshot the CRF decisions BEFORE the neural pass: NeuralTagger.tag()
+        # updates the RMAResult objects in place, so reading crf_r.pos after
+        # self.neural.tag() would see the neural's overridden POS and silently
+        # turn this fallback into a full neural override (i.e. config C).
+        crf_decisions = [(r.pos, r.confidence) for r in crf_results]
         neural_results = self.neural.tag(crf_results)
 
         fused: list[RMAResult] = []
-        for rma_r, crf_r, neu_r in zip(rma_results, crf_results, neural_results):
+        neural_taken = 0
+        for i, (rma_r, neu_r) in enumerate(zip(rma_results, neural_results)):
+            crf_pos, crf_conf = crf_decisions[i]
             needs_neural = (
-                crf_r.pos in self.fallback_unknown_pos
-                or crf_r.confidence < self.fallback_conf_threshold
+                crf_pos in self.fallback_unknown_pos
+                or crf_conf < self.fallback_conf_threshold
             )
             if needs_neural and neu_r.pos not in self.fallback_unknown_pos:
                 pos, conf = neu_r.pos, neu_r.confidence
+                neural_taken += 1
             else:
-                pos, conf = crf_r.pos, crf_r.confidence
+                pos, conf = crf_pos, crf_conf
 
             fused.append(RMAResult(
                 token=rma_r.token,
@@ -290,6 +298,22 @@ class Pipeline:
                 suffix_categories=rma_r.suffix_categories,
                 confidence=conf,
             ))
+
+        # Instrumentation for the paper: how many tokens the neural tagger
+        # actually decided (share of fallback-routed tokens). Counters
+        # accumulate across process() calls; evaluate.py reads them after the
+        # full corpus pass. Purely additive.
+        prev = getattr(self, "last_fallback_stats",
+                       {"total": 0, "neural_candidates": 0, "neural_taken": 0})
+        self.last_fallback_stats = {
+            "total": prev["total"] + len(rma_results),
+            "neural_candidates": prev["neural_candidates"] + sum(
+                1 for p, c in crf_decisions
+                if p in self.fallback_unknown_pos
+                or c < self.fallback_conf_threshold
+            ),
+            "neural_taken": prev["neural_taken"] + neural_taken,
+        }
 
         return self.mfrn.apply(fused)
 

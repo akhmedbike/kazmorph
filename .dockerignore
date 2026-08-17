@@ -1,0 +1,40 @@
+# Контейнер получает models/ и data/ через bind-mount (docker-compose.yml),
+# поэтому в образ они не нужны — это убирает из build-контекста 840 МБ весов
+# (*.safetensors) и данные.
+
+.git/
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Виртуальные окружения и кеш Python.
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Bind-mounted в рантайме.
+models/
+data/
+
+# Внутренние документы и генерируемые артефакты.
+docs/
+reports/
+*.log
+
+# Секреты — никогда не пекутся в образ.
+.env
+.env.*
+!.env.example
+
+# ОС / IDE / агент.
+.DS_Store
+.idea/
+.vscode/
+.zcode/

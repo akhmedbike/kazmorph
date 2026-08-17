@@ -24,6 +24,9 @@ question.
 
 from __future__ import annotations
 
+import os
+import random
+
 import torch
 
 
@@ -39,3 +42,33 @@ def pick_device() -> torch.device:
     if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
+
+
+def enable_determinism(seed: int = 42) -> None:
+    """Seed every RNG source for reproducible runs.
+
+    Sets ``PYTHONHASHSEED`` (for the process, via ``os.environ`` — best-effort,
+    it only takes full effect for processes started with it set), Python's
+    ``random``, NumPy, and PyTorch (CPU + CUDA). MPS has no deterministic-mode
+    flag in current PyTorch, so MPS runs may still show minor non-determinism;
+    call this at the very start of a script to minimise drift.
+
+    Each backend is imported lazily inside a try/except, so this function works
+    on a CPU-only box without numpy installed (it silently skips absent
+    backends rather than raising). Call it once at program start, before any
+    model construction or data loading.
+
+    Adapted from the IHCONCS_2026_paper project (MIT).
+    """
+    # PYTHONHASHSEED must be set before interpreter start to fully take effect;
+    # setting it here is best-effort (helps subprocesses spawned later).
+    os.environ.setdefault("PYTHONHASHSEED", str(seed))
+    random.seed(seed)
+    try:
+        import numpy as np
+        np.random.seed(seed)
+    except ImportError:
+        pass
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)

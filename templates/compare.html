@@ -1,0 +1,101 @@
+{#
+  A/B comparison page (route /compare).
+  Shows the same Kazakh text corrected two ways, side by side:
+    LEFT  — /api/v1/correct   (binary: every low-conf/UNK token replaced)
+    RIGHT — /api/v1/correct3   (three-way KEEP / CORRECT / REVIEW)
+  The point: on clean or rare-but-correct text, the binary corrector makes
+  unjustified changes (false corrections) while the three-way corrector
+  either KEEPS the token or flags it REVIEW with its candidate list.
+#}
+{% extends "base.html" %}
+
+{% block title %}Түзетуді салыстыру — {% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+  .cmp-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  .cmp-hero h1 { font-size: 1.6rem; margin: 0 0 6px; }
+  .cmp-hero p { color: var(--text-muted, #666); margin: 0 0 20px; font-size: .95rem; }
+  textarea#cmpInput {
+    width: 100%; min-height: 96px; padding: 12px 14px;
+    border: 1px solid var(--border, #ddd); border-radius: 8px;
+    font: inherit; resize: vertical; background: var(--bg, #fff); color: var(--text, #111);
+  }
+  .cmp-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .cmp-actions .spacer { flex: 1; }
+  .cmp-stats { font-size: .85rem; color: var(--text-muted, #888); }
+  .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 760px) { .cmp-grid { grid-template-columns: 1fr; } }
+  .cmp-card { border: 1px solid var(--border, #e3e3e3); border-radius: 10px; overflow: hidden; }
+  .cmp-card .head { display: flex; justify-content: space-between; align-items: center;
+                    padding: 10px 14px; background: var(--bg-soft, #f7f7f7); border-bottom: 1px solid var(--border, #eee); }
+  .cmp-card .head .tag { font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .tag.old { background: #fdecea; color: #b33; }
+  .tag.new { background: #e7f4e4; color: #2a7; }
+  .cmp-card .body { padding: 14px; min-height: 120px; font-size: .95rem; line-height: 1.7; }
+  .cmp-card .body .ph { color: var(--text-muted, #aaa); font-style: italic; }
+  .cmp-out { white-space: pre-wrap; word-break: break-word; }
+  /* token-level badges in the rendered corrected text */
+  .tok { padding: 1px 0; border-radius: 3px; }
+  .tok.correct { background: #fff3cd; border-bottom: 2px solid #e0a800; }
+  .tok.review  { background: #f0e6ff; border-bottom: 2px dashed #8a3ffc; cursor: help; }
+  .tok.keep    { background: transparent; }
+  .cmp-meta { font-size: .8rem; color: var(--text-muted, #888); margin-top: 8px; }
+  .cmp-cand { font-size: .78rem; color: #555; }
+  .btn { cursor: pointer; border: 1px solid var(--border, #ccc); background: var(--bg, #fff);
+         color: var(--text, #111); padding: 8px 14px; border-radius: 8px; font: inherit; }
+  .btn:hover { background: var(--bg-soft, #f5f5f5); }
+  .btn.primary { background: #c8472b; color: #fff; border-color: #c8472b; }
+  .btn.primary:hover { background: #b13d23; }
+  .legend { display: flex; gap: 14px; font-size: .78rem; margin-top: 12px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cmp-wrap">
+  <div class="cmp-hero">
+    <h1>Түзетуді салыстыру · <span style="font-weight:400;font-size:.9rem;color:var(--text-muted,#888)">A/B: ескі vs жаңа корректор</span></h1>
+    <p>Бір мәтін — екі тәсіл. Сол жақ: ескі бинарлы корректор (әр төмен-сенімді сөзді ауыстырады). Оң жақ: жаңа үш жақты (KEEP / CORRECT / REVIEW). REVIEW түпнұсқаны сақтайды және үміткерлерді көрсетеді.</p>
+  </div>
+
+  <textarea id="cmpInput" placeholder="Қазақша мәтінді жазыңыз…">Бүгін адамм мектепке келді және жаңа мұғаліммен танысты.</textarea>
+  <div class="cmp-actions">
+    <button class="btn primary" id="cmpRun">Салыстыру ▸</button>
+    <button class="btn" id="cmpSample">Мысал</button>
+    <button class="btn" id="cmpClear">Тазалау</button>
+    <span class="spacer"></span>
+    <span class="cmp-stats" id="cmpStats"></span>
+  </div>
+  <div class="legend">
+    <span><i class="sw" style="background:#fff3cd;border-bottom:2px solid #e0a800"></i> CORRECT — сөз ауыстырылды</span>
+    <span><i class="sw" style="background:#f0e6ff;border-bottom:2px dashed #8a3ffc"></i> REVIEW — болжамды, сақталды</span>
+    <span><i class="sw" style="background:transparent;border:1px solid #ccc"></i> KEEP — өзгертілмеді</span>
+  </div>
+
+  <div class="cmp-grid">
+    <div class="cmp-card">
+      <div class="head">
+        <strong>Ескі · бинарлы</strong>
+        <span class="tag old">POST /correct</span>
+      </div>
+      <div class="body" id="cmpOld"><span class="ph">нәтиже осында…</span></div>
+      <div class="cmp-meta" id="cmpOldMeta"></div>
+    </div>
+    <div class="cmp-card">
+      <div class="head">
+        <strong>Жаңа · үш жақты</strong>
+        <span class="tag new">POST /correct3</span>
+      </div>
+      <div class="body" id="cmpNew"><span class="ph">нәтиже осында…</span></div>
+      <div class="cmp-meta" id="cmpNewMeta"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/compare.js?v=1"></script>
+{% endblock %}

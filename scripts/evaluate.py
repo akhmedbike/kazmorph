@@ -361,9 +361,17 @@ def main():
     )
     parser.add_argument(
         "--config", default="full",
-        choices=["rma", "crf", "neural", "hybrid", "full", "all"],
+        choices=["rma", "crf", "neural", "hybrid", "full", "fallback", "all"],
         help="Which pipeline configuration(s) to evaluate. 'all' runs the "
-             "ablation set A–E; 'full' runs only E (Hybrid+routing).",
+             "ablation set A–F; 'full' runs only E (Hybrid+routing); "
+             "'fallback' runs only F (Hybrid+fallback).",
+    )
+    parser.add_argument(
+        "--fallback-threshold", type=float, default=None,
+        help="Confidence threshold τ for configuration F only: tokens whose "
+             "CRF marginal confidence falls below τ (or that the CRF leaves "
+             "UNK/X) are re-tagged by the neural tagger. Other configurations "
+             "are unaffected. Default: the Pipeline default (0.50).",
     )
     args = parser.parse_args()
 
@@ -412,13 +420,16 @@ def main():
         "F": ("RMA+CRF+Neural-fallback", lambda: Pipeline(
             crf_model_path=crf_path if os.path.exists(crf_path) else None,
             neural_model_path=neural_path if os.path.exists(neural_path) else None,
-            fallback=True)),
+            fallback=True,
+            **({"fallback_conf_threshold": args.fallback_threshold}
+               if args.fallback_threshold is not None else {}))),
     }
     # Map the friendly --config names to ablation letters.
     friendly = {"rma": "A", "crf": "B", "neural": "C", "hybrid": "D",
                 "full": "E", "fallback": "F"}
 
     models: list[tuple[str, list[dict]]] = []
+    fallback_stats: dict[str, dict] = {}
     for key in requested:
         letter = friendly.get(key, key)
         label, factory = cfg_map[letter]
@@ -426,6 +437,11 @@ def main():
         pipe = factory()
         t0 = time.time()
         toks = evaluate_pipeline(pipe, sentences)
+        stats = getattr(pipe, "last_fallback_stats", None)
+        if stats is not None:
+            fallback_stats[f"[{letter}] {label}"] = dict(stats)
+            print(f"  neural-fallback taken for {stats['neural_taken']}/{stats['total']} "
+                  f"tokens ({stats['neural_taken'] / max(stats['total'], 1) * 100:.1f}%)")
         print(f"  done in {time.time() - t0:.1f}s  ({len(toks)} tokens)")
         models.append((f"[{letter}] {label}", toks))
 
@@ -439,8 +455,11 @@ def main():
         "sentences": len(sentences),
         "tokens": total_tokens,
         "bootstrap_iterations": args.bootstrap_iterations,
+        "fallback_threshold": args.fallback_threshold,
         "configurations": {},
     }
+    if fallback_stats:
+        report["fallback_stats"] = fallback_stats
 
     # ── Bootstrap CI ────────────────────────────────────────────
     print("\n" + "=" * 70)

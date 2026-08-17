@@ -249,6 +249,39 @@ async def api_docs(request: Request):
     )
 
 
+@app.get("/compare")
+async def compare(request: Request):
+    """A/B страница сравнения корректоров: /correct (бинарный) vs /correct3 (KEEP/CORRECT/REVIEW).
+
+    Один мәтін — екі тәсіл. Сол жақта ескі корректор әр төмен-сенімді сөзді
+    ауыстырады; оң жақта жаңа үш жақты корректор шешімді KEEP/CORRECT/REVIEW
+    бойынша түспен көрсетеді. REVIEW түпнұсқаны сақтайды және үміткерлерді
+    көрсетеді — бұл жаңа мүмкіндікті көрнекі түрде сынап көруге арналған.
+    """
+    user = None
+    if db_available():
+        from app.db import get_session_factory
+
+        factory = get_session_factory()
+        if factory:
+            db = factory()
+            try:
+                user = get_current_user(request, db)
+            finally:
+                db.close()
+    return templates.TemplateResponse(
+        request=request,
+        name="compare.html",
+        context={
+            "lang": "kk",
+            "default_text": DEFAULT_TEXT,
+            "current_user": user,
+            "is_authenticated": user is not None,
+            "db_enabled": db_available(),
+        },
+    )
+
+
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze(request: Request, req: AnalyzeRequest):
     """Analyze Kazakh text through the full 4-stage pipeline.
