@@ -292,6 +292,15 @@ def benchmark_configs(conllu_path: str, *, out_path: str | None = None) -> list[
          lambda: Pipeline(crf_model_path=crf, neural_model_path=neural,
                           fallback=True)),
     ]
+    # Strong-transformer baselines G/H (same shape as RMA+Neural, different
+    # pretrained encoder) — only benchmarked when their checkpoints exist.
+    for label, path in (("RMA+XLM-R", "models/neural_pos_xlmr"),
+                        ("RMA+KazRoBERTa", "models/neural_pos_kazr")):
+        if os.path.exists(os.path.join(path, "config.json")):
+            configs.append((label, True,
+                            (lambda p=path: Pipeline(
+                                neural_model_path=p,
+                                lemma_model_path=lemma))))
 
     print("=" * 70)
     print("  THROUGHPUT / RAM BENCHMARK (paper Table 9)")

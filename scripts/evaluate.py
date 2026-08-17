@@ -9,7 +9,7 @@ Produces, for one or more pipeline configurations on a held-out test set:
   5. A confusion matrix (CSV) and error-class distribution (CSV)
   6. A machine-readable metrics.json + run_config.json for the paper's tables
 
-Configuration set (paper ablation A–F):
+Configuration set (paper ablation A–F, plus strong baselines G/H when trained):
   A) RMA-only            Pipeline(crf=None, neural=None)
   B) RMA+CRF             Pipeline(crf=..., neural=None)
   C) RMA+Neural          Pipeline(crf=None, neural=...)         (linear cascade)
@@ -369,9 +369,9 @@ def main():
     )
     parser.add_argument(
         "--config", default="full",
-        choices=["rma", "crf", "neural", "hybrid", "full", "fallback", "all"],
+        choices=["rma", "crf", "neural", "hybrid", "full", "fallback", "xlmr", "kazr", "all"],
         help="Which pipeline configuration(s) to evaluate. 'all' runs the "
-             "ablation set A–F; 'full' runs only E (Hybrid+routing); "
+             "ablation set A–F (plus G/H when their checkpoints exist); 'full' runs only E (Hybrid+routing); "
              "'fallback' runs only F (Hybrid+fallback).",
     )
     parser.add_argument(
@@ -418,10 +418,24 @@ def main():
     crf_path = "models/crf_model.joblib"
     neural_path = "models/neural_pos"
     lemma_path = "models/neural_lemma"
+    # Strong-transformer baselines (paper configs G/H): fine-tuned with the
+    # same protocol as C (scripts/train_neural.py, data/train.conllu,
+    # folds=1, 12 epochs, seed 42) but on XLM-R-base / Kazakh RoBERTa.
+    xlmr_path = "models/neural_pos_xlmr"
+    kazr_path = "models/neural_pos_kazr"
 
-    # Build the requested configuration set (paper ablation A–F).
+    def _trained(path: str) -> bool:
+        return os.path.exists(os.path.join(path, "config.json"))
+
+    # Build the requested configuration set (paper ablation A–F, plus the
+    # strong baselines G/H when their checkpoints exist).
     configs: list[tuple[str, Pipeline]] = []
     requested = ["A", "B", "C", "D", "E", "F"] if args.config == "all" else [args.config]
+    if args.config == "all":
+        if _trained(xlmr_path):
+            requested.append("G")
+        if _trained(kazr_path):
+            requested.append("H")
 
     cfg_map = {
         # name, label, pipeline factory
@@ -450,14 +464,27 @@ def main():
             **({"fallback_conf_threshold": args.fallback_threshold}
                if args.fallback_threshold is not None else {}))),
     }
+    # G/H mirror C exactly except for the fine-tuned base model, so the
+    # G-vs-C / H-vs-C comparisons isolate the pretrained encoder.
+    if _trained(xlmr_path):
+        cfg_map["G"] = ("RMA+XLM-R", lambda: Pipeline(
+            neural_model_path=xlmr_path,
+            lemma_model_path=lemma_path if os.path.exists(lemma_path) else None))
+    if _trained(kazr_path):
+        cfg_map["H"] = ("RMA+KazRoBERTa", lambda: Pipeline(
+            neural_model_path=kazr_path,
+            lemma_model_path=lemma_path if os.path.exists(lemma_path) else None))
     # Map the friendly --config names to ablation letters.
     friendly = {"rma": "A", "crf": "B", "neural": "C", "hybrid": "D",
-                "full": "E", "fallback": "F"}
+                "full": "E", "fallback": "F", "xlmr": "G", "kazr": "H"}
 
     models: list[tuple[str, list[dict]]] = []
     fallback_stats: dict[str, dict] = {}
     for key in requested:
         letter = friendly.get(key, key)
+        if letter not in cfg_map:
+            sys.exit(f"error: configuration {letter} is not available "
+                     f"(trained model missing — run scripts/train_neural.py first)")
         label, factory = cfg_map[letter]
         print(f"Evaluating [{letter}] {label} ...")
         pipe = factory()
