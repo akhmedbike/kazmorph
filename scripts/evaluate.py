@@ -34,6 +34,8 @@ from collections import Counter, defaultdict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from kazmorph.pipeline import Pipeline
+from kazmorph.rma import ReverseMorphAnalyzer
+from kazmorph.taxonomy import classify_scored
 
 
 # ============================================================
@@ -235,8 +237,14 @@ def compute_f1(tokens: list[dict]) -> dict:
             "support": support,
         }
 
-    # Macro-F1: unweighted average of per-class F1
-    f1_values = [per_tag[t]["f1"] for t in all_tags]
+    # Macro-F1: unweighted average of per-class F1 over the tags present in
+    # the GOLD data. Tags that appear only in predictions (e.g. the RMA's
+    # UNK, which is not a gold UPOS tag and has support 0) are excluded:
+    # those predictions already hurt the precision/recall of the gold tags
+    # they should have been, and adding them as extra macro rows would
+    # double-penalise the predicting configuration.
+    gold_tags = [t for t in all_tags if per_tag[t]["support"] > 0]
+    f1_values = [per_tag[t]["f1"] for t in gold_tags]
     macro_f1 = sum(f1_values) / len(f1_values) if f1_values else 0.0
 
     # Weighted-F1: weighted by support (number of true instances per class)
@@ -382,6 +390,24 @@ def main():
     # Load data
     sentences = parse_conllu(args.test_file)
     total_tokens = sum(len(s) for s in sentences)
+
+    # Fixed, model-independent taxonomy partition. The pipeline's own
+    # difficulty_class is computed after the POS/lemma decisions (the MFRN
+    # pass feeds the AGR detector), so it varies by configuration and makes
+    # per-class slices incomparable across configs. Classify every gold token
+    # once with the standalone RMA classifier (identical to
+    # scripts/sensitivity.py at the default θ = 0.30) and use that partition
+    # for ALL configurations' per-error-class metrics, error_distribution.csv
+    # and Figure 2/7/8 of the paper.
+    standalone_rma = ReverseMorphAnalyzer()
+    fixed_classes = [
+        classify_scored(standalone_rma.analyze(t["form"])).difficulty_class
+        for s in sentences for t in s
+    ]
+    fixed_counts = Counter(fixed_classes)
+    print(f"Fixed taxonomy partition (standalone RMA, θ=0.30): "
+          + ", ".join(f"{c}={fixed_counts[c]}" for c in _ERROR_CLASSES))
+
     print("=" * 70)
     print("  KazMorphCorpus-2026 — Statistical Evaluation")
     print("=" * 70)
@@ -437,6 +463,10 @@ def main():
         pipe = factory()
         t0 = time.time()
         toks = evaluate_pipeline(pipe, sentences)
+        # Replace the pipeline's configuration-dependent difficulty class
+        # with the fixed standalone partition (see comment above).
+        for t, cls in zip(toks, fixed_classes):
+            t["difficulty_class"] = cls
         stats = getattr(pipe, "last_fallback_stats", None)
         if stats is not None:
             fallback_stats[f"[{letter}] {label}"] = dict(stats)

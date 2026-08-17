@@ -157,7 +157,10 @@ def fig_architecture(out_dir: str) -> None:
 
 def fig_class_distribution(metrics: dict, test_file: str, out_dir: str) -> None:
     """Fig 2: token distribution by UPOS and predicted error class."""
-    # Error-class distribution from the full config (E); fall back to last.
+    # Error-class distribution of the routed config. evaluate.py overwrites
+    # every configuration's difficulty_class with the fixed standalone RMA
+    # classification (θ=0.30), so this equals the model-independent
+    # distribution of Table 4 / error_distribution.csv for any config.
     cfg = metrics["configurations"]
     name = next((k for k in cfg if "routing" in k), list(cfg)[-1])
     tax = cfg[name]["error_taxonomy_f1"]

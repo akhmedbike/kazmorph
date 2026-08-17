@@ -113,7 +113,7 @@ python scripts/benchmark.py --configs  # throughput/RAM per configuration (Table
 
 | Configuration | POS Acc | 95% CI | Lemma | Macro-F1 | W-F1 |
 |---|---:|:---:|---:|---:|---:|
-| **A** RMA-only (lexicon) | 92.53% | [91.22, 93.79] | 95.04% | 0.8083 | 0.9258 |
+| **A** RMA-only (lexicon) | 92.53% | [91.22, 93.79] | 95.04% | 0.8588 | 0.9258 |
 | **B** RMA + CRF | **93.10%** | [91.84, 94.35] | **95.04%** | **0.8853** | **0.9310** |
 | **C** RMA + Neural | 89.02% | [87.52, 90.53] | 94.10% | 0.8014 | 0.8888 |
 | **D** Hybrid (cascade) | 89.02% | [87.52, 90.53] | 94.10% | 0.8014 | 0.8888 |
