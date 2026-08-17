@@ -119,13 +119,17 @@ python scripts/benchmark.py --configs  # throughput/RAM per configuration (Table
 | **D** Hybrid (cascade) | 89.02% | [87.52, 90.53] | 94.10% | 0.8014 | 0.8888 |
 | **E** Hybrid + routing | 89.46% | [87.95, 90.97] | 94.10% | 0.8127 | 0.8931 |
 | **F** Hybrid + fallback | 92.85% | [91.59, 94.10] | 95.04% | 0.8748 | 0.9265 |
+| **G** RMA + XLM-R-base | 89.90% | [88.39, 91.41] | 94.23% | 0.8342 | 0.9013 |
+| **H** RMA + KazRoBERTa | 83.88% | [82.06, 85.63] | 94.17% | 0.7798 | 0.8418 |
 
 ### Key findings
 
-1. **CRF outperforms the neural tagger on POS** under an honest,
-   decontaminated evaluation: RMA+CRF (93.10%) beats RMA+Neural (89.02%) by
-   ~4.1 points and is ~29× faster (4,189 vs 143 tok/s on CPU). The difference
-   is statistically significant (McNemar χ² = 26.43, p < 10⁻⁶).
+1. **CRF outperforms every fine-tuned transformer tested on POS** under an
+   honest, decontaminated evaluation: RMA+CRF (93.10%) beats the monolingual
+   KazBERT (89.02%, ~4.1 pp, McNemar χ² = 26.43, p < 10⁻⁶), XLM-R-base
+   (89.90%, 3.2 pp, p < 10⁻⁴), and a Kazakh RoBERTa (83.88%, p < 10⁻⁶),
+   while running ~43× faster (6,370 vs 148 tok/s on CPU, single session).
+   The CRF's own gain over RMA-only (+0.6 pp) is not significant (p = 0.29).
 2. **The RMA lexicon also beats the neural lemmatizer** (95.04% vs 94.10%),
    so the recommended configuration B is best on both POS and lemma.
 3. **Routing (D vs. E) is a small gain that does not survive multiple-comparison
