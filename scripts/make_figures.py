@@ -156,38 +156,31 @@ def fig_architecture(out_dir: str) -> None:
 
 
 def fig_class_distribution(metrics: dict, test_file: str, out_dir: str) -> None:
-    """Fig 2: token distribution by UPOS and predicted error class."""
+    """Fig 4: token distribution by predicted error class.
+
+    Single panel (error classes only): the UPOS-distribution panel was
+    dropped from the paper — it carries no argument that Table 2 and the
+    per-tag F1 figure do not already make.
+    """
     # Error-class distribution of the routed config. evaluate.py overwrites
     # every configuration's difficulty_class with the fixed standalone RMA
     # classification (θ=0.30), so this equals the model-independent
-    # distribution of Table 4 / error_distribution.csv for any config.
+    # distribution of Table 2 / error_distribution.csv for any config.
     cfg = metrics["configurations"]
     name = next((k for k in cfg if "routing" in k), list(cfg)[-1])
     tax = cfg[name]["error_taxonomy_f1"]
     classes = ["BOR", "AFC", "SEG", "AGR", "NONE"]
     counts = [tax[c]["support"] for c in classes]
 
-    # UPOS distribution: sum support across per_tag_f1 of same config.
-    per_tag = cfg[name]["per_tag_f1"]
-    upos = [t for t in upos_order if t in per_tag]
-    upos_counts = [per_tag[t].get("support", 0) for t in upos]
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 3.2))
-    ax1.bar(range(len(upos)), upos_counts, color="#3b82f6", alpha=0.85)
-    ax1.set_xticks(range(len(upos)))
-    ax1.set_xticklabels(upos, rotation=45, ha="right")
-    ax1.set_title("(a) Tokens by UPOS category")
-    ax1.set_ylabel("Token count")
-    ax1.set_yscale("log")
-
+    fig, ax = plt.subplots(figsize=(6.4, 3.4))
     total = sum(counts)
-    bars = ax2.bar(classes, counts,
-                   color=[CLASS_COLORS[c] for c in classes], alpha=0.85)
-    ax2.set_title("(b) Tokens by error class (predicted)")
-    ax2.set_ylabel("Token count")
+    bars = ax.bar(classes, counts,
+                  color=[CLASS_COLORS[c] for c in classes], alpha=0.85)
+    ax.set_title("Tokens by error class (predicted)")
+    ax.set_ylabel("Token count")
     for b, c in zip(bars, counts):
-        ax2.text(b.get_x() + b.get_width() / 2, b.get_height(),
-                 f"{c/total*100:.1f}%", ha="center", va="bottom", fontsize=7)
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height(),
+                f"{c/total*100:.1f}%", ha="center", va="bottom", fontsize=7)
     _save(fig, out_dir, "fig2_class_distribution.png")
 
 
