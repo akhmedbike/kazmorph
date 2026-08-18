@@ -343,6 +343,7 @@ def run_fold(
     label_smoothing: float = 0.0,
     focal_gamma: float = 0.0,
     augment: AugmentConfig | None = None,
+    augment_seed: int = 0,
     warmup_frac: float = 0.1,
 ) -> tuple[float, dict]:
     """Train one fold; return (best_dev_weighted_f1, last_epoch_details).
@@ -383,6 +384,7 @@ def run_fold(
     train_ds = POSTokenDataset(
         train_sents, tokenizer, TAG2ID, n_gold=n_gold_train,
         augment=augment,
+        augment_seed=augment_seed,
     )
     dev_ds = POSTokenDataset(dev_sents, tokenizer, TAG2ID)
     # DataCollatorForTokenClassification pads input_ids, attention_mask and
@@ -521,8 +523,26 @@ def _promote_fold(model_dir: str, fold_dir: str) -> None:
 
 
 def train(args):
+    import random as _random
     from kazmorph.device import pick_device
     device = pick_device()
+    # Seed every RNG the training loop draws from: torch (classifier-head
+    # init, dropout, DataLoader shuffling), python random (augmentation), and
+    # the MPS generator. Without this, --seed only controlled the k-fold
+    # split (and not at all under --dev-file), so every run was an unseeded
+    # random restart — valid for variance estimation, but not reproducible
+    # from the nominal seed.
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+    if getattr(torch, "mps", None) is not None and torch.mps.is_available():
+        try:
+            torch.mps.manual_seed(args.seed)
+        except (AttributeError, RuntimeError):
+            pass  # older torch builds: the global torch.manual_seed covers MPS
+    _random.seed(args.seed)
+    args.augment_seed = args.seed  # per-run augmentation stream (was fixed 0)
+    print(f"Seeded torch/python RNGs with seed={args.seed}")
     # On CPU, cap intra-op parallelism at a moderate thread count. Setting it
     # too high relative to physical cores causes thread oversubscription and
     # catastrophic slowdown (observed: 79 threads, ~0 epochs in 8 min). We do
@@ -623,6 +643,7 @@ def train(args):
             label_smoothing=args.label_smoothing,
             focal_gamma=args.focal_gamma,
             augment=aug_cfg,
+            augment_seed=getattr(args, "augment_seed", args.seed),
             warmup_frac=args.warmup_frac,
         )
 
