@@ -1,5 +1,6 @@
 {
-  "temperature": 1.25,
-  "ece_before": 0.02751353485830897,
-  "ece_after": 0.0066101526696411075
+  "mode": "scalar",
+  "temperature": 1.4,
+  "ece_before": 0.05546268215581371,
+  "ece_after": 0.021143027211362204
 }

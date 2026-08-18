@@ -1,0 +1,12 @@
+{
+  "base_model": "FacebookAI/xlm-roberta-base",
+  "folds": 1,
+  "epochs": 12,
+  "folds_completed": 1,
+  "fold_f1": [
+    0.9268650941522355
+  ],
+  "mean_f1": 0.9268650941522355,
+  "std_f1": 0.0,
+  "partial": false
+}

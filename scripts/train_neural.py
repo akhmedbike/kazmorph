@@ -552,8 +552,15 @@ def train(args):
     print(f"Gold tag distribution ({sum(tc.values())} tokens): "
           f"{', '.join(f'{t}={c}' for t, c in sorted(tc.items(), key=lambda kv: -kv[1])[:6])} ...")
 
-    folds = stratified_kfold(pool, k=args.folds, seed=args.seed)
-    print(f"Cross-validation: {len(folds)} folds")
+    if args.dev_file:
+        dev_pool = load_pool([args.dev_file], dedup=True)
+        folds = [(pool, dev_pool)]
+        print(f"External dev file: {args.dev_file} ({len(dev_pool)} sentences); "
+              f"training uses the FULL gold pool ({len(pool)} sentences), "
+              f"k-fold splitting bypassed")
+    else:
+        folds = stratified_kfold(pool, k=args.folds, seed=args.seed)
+        print(f"Cross-validation: {len(folds)} folds")
 
     fold_f1s: list[float] = []
     last_fold_report = None
@@ -723,6 +730,12 @@ if __name__ == "__main__":
                         "legacy behaviour, <1.0 down-weights silver)")
     p.add_argument("--data", nargs="*", default=None,
                    help="Override gold CoNLL-U files (default: all data/*.conllu)")
+    p.add_argument("--dev-file", default=None,
+                   help="External dev CoNLL-U (e.g. data/dev.conllu). When set, ALL "
+                        "sentences from --data are used for training and this file "
+                        "becomes the dev set (early stopping + model selection); "
+                        "stratified k-fold splitting is bypassed. This makes the "
+                        "training data identical to what train_crf.py consumes.")
     p.add_argument("--model-dir", default=os.path.join(PROJECT_ROOT, "models", "neural_pos"))
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--threads", type=int, default=min(8, os.cpu_count() or 4),

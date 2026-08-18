@@ -115,29 +115,36 @@ python scripts/benchmark.py --configs  # throughput/RAM per configuration (Table
 |---|---:|:---:|---:|---:|---:|
 | **A** RMA-only (lexicon) | 92.53% | [91.22, 93.79] | 95.04% | 0.8588 | 0.9258 |
 | **B** RMA + CRF | **93.10%** | [91.84, 94.35] | **95.04%** | **0.8853** | **0.9310** |
-| **C** RMA + Neural | 89.02% | [87.52, 90.53] | 94.10% | 0.8014 | 0.8888 |
-| **D** Hybrid (cascade) | 89.02% | [87.52, 90.53] | 94.10% | 0.8014 | 0.8888 |
-| **E** Hybrid + routing | 89.46% | [87.95, 90.97] | 94.10% | 0.8127 | 0.8931 |
-| **F** Hybrid + fallback | 92.85% | [91.59, 94.10] | 95.04% | 0.8748 | 0.9265 |
-| **G** RMA + XLM-R-base | 89.90% | [88.39, 91.41] | 94.23% | 0.8342 | 0.9013 |
-| **H** RMA + KazRoBERTa | 83.88% | [82.06, 85.63] | 94.17% | 0.7798 | 0.8418 |
+| **C** RMA + Neural | 88.96% | [87.45, 90.46] | 94.04% | 0.8115 | 0.8899 |
+| **D** Hybrid (cascade) | 88.96% | [87.45, 90.46] | 94.04% | 0.8115 | 0.8899 |
+| **E** Hybrid + routing | 89.52% | [88.02, 90.97] | 94.04% | 0.8496 | 0.8960 |
+| **F** Hybrid + fallback | 92.97% | [91.72, 94.23] | 95.04% | 0.8838 | 0.9290 |
+| **G** RMA + XLM-R-base | 88.83% | [87.26, 90.34] | 94.23% | 0.8055 | 0.8926 |
+| **H** RMA + KazRoBERTa | 87.77% | [86.14, 89.33] | 94.17% | 0.7960 | 0.8780 |
+
+All three transformer encoders are trained on data **identical to the CRF's**
+(full 754-sentence `train.conllu`, selection on `dev.conllu`, LR grid
+{2, 3, 5}×10⁻⁵ — 5×10⁻⁵ won for every encoder).
 
 ### Key findings
 
-1. **CRF outperforms every fine-tuned transformer tested on POS** under an
-   honest, decontaminated evaluation: RMA+CRF (93.10%) beats the monolingual
-   KazBERT (89.02%, ~4.1 pp, McNemar χ² = 26.43, p < 10⁻⁶), XLM-R-base
-   (89.90%, 3.2 pp, p < 10⁻⁴), and a Kazakh RoBERTa (83.88%, p < 10⁻⁶),
-   while running ~43× faster (6,370 vs 148 tok/s on CPU, single session).
-   The CRF's own gain over RMA-only (+0.6 pp) is not significant (p = 0.29).
-2. **The RMA lexicon also beats the neural lemmatizer** (95.04% vs 94.10%),
+1. **CRF outperforms every fine-tuned transformer tested, on every training
+   seed**, under an honest, decontaminated evaluation: RMA+CRF (93.10%) beats
+   the monolingual KazBERT (seed mean 89.23% ± 0.19 over 3 seeds), XLM-R-base
+   (91.30% ± 1.74; seeds 88.83/92.53/92.53 — best seed p = 0.29 vs B), and a
+   Kazakh RoBERTa (87.77% ± 0.31), while running 35–43× faster (median 6,009
+   vs 140–171 tok/s on CPU, 5 repetitions). Single-seed contrasts: all
+   p < 10⁻⁶. The seed spread itself (up to 3.7 pp for XLM-R) quantifies
+   fine-tuning instability at ~7k tokens. The CRF's own gain over RMA-only
+   (+0.6 pp) is not significant (p = 0.29).
+2. **The RMA lexicon also beats the neural lemmatizer** (95.04% vs 94.04%),
    so the recommended configuration B is best on both POS and lemma.
 3. **Routing (D vs. E) is a small gain that does not survive multiple-comparison
-   correction** (+0.44 pp, p = 0.023 nominal, not significant after Holm
-   correction over the 15 pairwise tests) — reported as a limitation.
-4. **Hard neural fallback (F) does not improve on CRF-only** (92.85% vs
-   93.10%, p = 0.34): the neural tagger is consulted for only ~1% of tokens
-   (τ = 0.50) and converts 3 CRF errors into correct tags while introducing 7
+   correction** (+0.56 pp, p = 0.008 nominal, not significant after Holm
+   correction over the 28 pairwise tests) — reported as a limitation.
+4. **Hard neural fallback (F) does not improve on CRF-only** (92.97% vs
+   93.10%, p = 0.68): the neural tagger is adopted for only ~0.6% of tokens
+   (τ = 0.50) and converts 2 CRF errors into correct tags while introducing 4
    new ones — reinforcing the low-resource thesis.
 5. Prior silver-augmented runs that reported POS ≈ 95% were **contaminated**
    by sentence overlap between silver data and the test split; closing that
