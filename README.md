@@ -131,12 +131,11 @@ All three transformer encoders are trained on data **identical to the CRF's**
 1. **CRF outperforms every fine-tuned transformer tested, on every training
    seed**, under an honest, decontaminated evaluation: RMA+CRF (93.10%) beats
    the monolingual KazBERT (seed mean 89.23% ± 0.19 over 3 seeds), XLM-R-base
-   (91.30% ± 1.74; seeds 88.83/92.53/92.53 — best seed p = 0.29 vs B), and a
-   Kazakh RoBERTa (87.77% ± 0.31), while running 35–43× faster (median 6,009
-   vs 140–171 tok/s on CPU, 5 repetitions). Single-seed contrasts: all
-   p < 10⁻⁶. The seed spread itself (up to 3.7 pp for XLM-R) quantifies
-   fine-tuning instability at ~7k tokens. The CRF's own gain over RMA-only
-   (+0.6 pp) is not significant (p = 0.29).
+   (89.21% ± 0.27), and a Kazakh RoBERTa (87.77% ± 0.31), while running
+   35–43× faster (median 6,009 vs 140–171 tok/s on CPU, 5 repetitions).
+   Even the best individual seed run of each encoder stays significantly
+   below B (p ≤ 3×10⁻⁶); encoders are seed-stable (sd ≤ 0.31 pp). The CRF's
+   own gain over RMA-only (+0.6 pp) is not significant (p = 0.29).
 2. **The RMA lexicon also beats the neural lemmatizer** (95.04% vs 94.04%),
    so the recommended configuration B is best on both POS and lemma.
 3. **Routing (D vs. E) is a small gain that does not survive multiple-comparison
