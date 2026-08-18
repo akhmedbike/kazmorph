@@ -22,8 +22,8 @@ Kazakh-KTB corpus.
 
 The pipeline (`kazmorph/pipeline.py`) processes a text through up to five
 stages, then classifies each token and generates correction candidates. It
-runs in two modes: a **linear cascade** (default) and an **error-taxonomy-driven
-fusion** (`routing=True`).
+runs in three modes: a **linear cascade** (default), an **error-taxonomy-driven
+fusion** (`routing=True`), and a **hard neural fallback** (`fallback=True`).
 
 ```
 text → tokenize → RMA → [CRF] → [Neural POS] → [Neural lemma] → MFRN
@@ -40,7 +40,7 @@ text → tokenize → RMA → [CRF] → [Neural POS] → [Neural lemma] → MFRN
 |-------|--------|-------------|
 | **RMA** | `rma.py` | Reverse Morphological Analyzer — trie-based suffix stripping with lexicon and UD-lemma lookup |
 | **CRF** | `crf_tagger.py` | sklearn-crfsuite POS disambiguator (~30 features, context window ±2). Bypassed in the cascade when a neural model is loaded |
-| **Neural POS** | `neural.py` | Transformer token classifier (KazBERT / XLM-RoBERTa) for 17 UPOS tags, confidence-calibrated via temperature scaling |
+| **Neural POS** | `neural.py` | Transformer token classifier (KazBERT / XLM-RoBERTa / Kazakh RoBERTa) for 17 UPOS tags, confidence-calibrated via temperature scaling |
 | **Neural lemma** | `neural_lemma.py` | KazBERT classifier predicting the lemma prefix length, with deterministic repair of final-consonant devoicing (қ↔ғ, к↔г) |
 | **MFRN** | `mfrn.py` | Morphophonological rule engine — 64 rules in 8 groups (vowel harmony, assimilation, devoicing, suffix selection, …) |
 
@@ -57,9 +57,11 @@ skipped and a bare `Pipeline()` runs RMA-only with a warning.
 
 ### Operating modes
 
-- **Cascade** (`routing=False`, default) — stages run in sequence; CRF is
-  skipped once a neural POS model is available (on this corpus the small-data
-  CRF hurts accuracy once a transformer is in place).
+- **Cascade** (`routing=False`, default) — stages run in sequence; the CRF is
+  bypassed once a neural POS model is loaded. On this corpus that is a
+  liability, not a benefit: the cascade (D) coincides with RMA+Neural (C,
+  89.59%) and stays 3.5 pp below RMA+CRF (B, 93.10%) — see configuration
+  D vs. B in the results table.
 - **Routed** (`routing=True`) — all POS components run, the per-token error
   class is computed, and the final POS/confidence is a confidence-weighted
   vote across RMA/CRF/Neural using per-class weights (`CLASS_WEIGHTS`).
@@ -259,8 +261,10 @@ main.py                  # FastAPI app: pages + /api/analyze + /api/health
 kazmorph/
     pipeline.py          # 5-stage orchestrator (cascade / routed modes)
     rma.py               # Stage 1 — reverse-trie suffix stripping + lexicon
-    crf.py               # PyTorch linear-chain CRF head
-    crf_tagger.py        # Stage 2 — sklearn-crfsuite POS tagger
+    crf.py               # experimental PyTorch linear-chain CRF head (not
+                         #   used in the reported experiments)
+    crf_tagger.py        # Stage 2 — sklearn-crfsuite POS tagger (the CRF
+                         #   behind configurations B/D/E/F in the paper)
     neural.py            # Stage 3 — transformer UPOS tagger (calibrated)
     neural_lemma.py      # Stage 3b — KazBERT lemma classifier
     neural_lemma_seq2seq.py  # alternative mt5-small seq2seq lemmatizer
@@ -289,8 +293,15 @@ tests/                   # ~23 pytest suites (pipeline, taggers, AL loop, web)
 # CRF POS tagger → models/crf_model.joblib
 python scripts/train_crf.py
 
-# Neural POS tagger (KazBERT, 5-fold CV, class weighting)
-python scripts/train_neural.py --base-model Eraly-ml/KazBERT --folds 5 --epochs 12
+# Neural POS tagger — paper protocol (§3.5): aligned training on the FULL
+# 754-sentence train.conllu, selection on dev.conllu, LR grid {2,3,5}e-5,
+# all RNGs seed-controlled (XLM-R-base: "FacebookAI/xlm-roberta-base",
+# Kazakh RoBERTa: "kz-transformers/kaz-roberta-conversational")
+for lr in 2e-5 3e-5 5e-5; do
+  python scripts/train_neural.py --base-model Eraly-ml/KazBERT \
+      --data data/train.conllu --dev-file data/dev.conllu \
+      --folds 1 --epochs 12 --seed 42 --lr $lr --model-dir models/sweep/$lr
+done
 
 # Neural lemmatizer (prefix-length classifier)
 python scripts/train_lemma.py --folds 5 --epochs 12
@@ -300,6 +311,16 @@ The UD corpus is small (754 train sentences). Silver annotations from
 [Apertium-kaz](https://github.com/apertium/apertium-kaz) can be mixed in via
 `--silver`; they are first decontaminated against the test split to prevent
 label leakage.
+
+The entire experimental chain of the paper — the LR sweep for all three
+encoders, promotion of the best checkpoints, temperature calibration, seed
+replicas (seeds 1/2/42 per encoder, with guards against model-less fallback),
+full evaluation, per-class McNemar tests, the 5-repetition benchmark, and
+figure generation — is reproducible with a single command:
+
+```bash
+bash scripts/repro_seeded.sh
+```
 
 ```bash
 # Convert Apertium-kaz → silver CoNLL-U
