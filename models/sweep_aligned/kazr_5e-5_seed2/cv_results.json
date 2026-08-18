@@ -1,0 +1,12 @@
+{
+  "base_model": "kz-transformers/kaz-roberta-conversational",
+  "folds": 1,
+  "epochs": 12,
+  "folds_completed": 1,
+  "fold_f1": [
+    0.8804790236866318
+  ],
+  "mean_f1": 0.8804790236866318,
+  "std_f1": 0.0,
+  "partial": false
+}

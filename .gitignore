@@ -255,3 +255,13 @@ reports/
 
 # Scraped full-text news (downloaded for analysis, never published).
 *.raw_news.json
+
+# Aligned-sweep checkpoint dirs: keep provenance JSONs, skip redundant
+# tokenizer copies (identical to the canonical models/* tokenizers).
+models/sweep_aligned/**/tokenizer.json
+models/sweep_aligned/**/tokenizer_config.json
+# Superseded checkpoint backups (old fold-split protocol / unseeded era).
+models/neural_pos_foldsplit_old/
+models/neural_pos_xlmr_foldsplit_old/
+models/neural_pos_kazr_foldsplit_old/
+models/sweep_unseeded_*/
