@@ -74,10 +74,12 @@ def _load(path: str) -> dict | None:
 
 def _save(fig, out_dir: str, name: str) -> str:
     path = os.path.join(out_dir, name)
+    svg_path = os.path.join(out_dir, os.path.splitext(name)[0] + ".svg")
     fig.tight_layout()
     fig.savefig(path, bbox_inches="tight")
+    fig.savefig(svg_path, bbox_inches="tight")  # vector copy for the journal
     plt.close(fig)
-    print(f"  wrote {path}")
+    print(f"  wrote {path} + .svg")
     return path
 
 
