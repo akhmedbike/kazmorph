@@ -59,6 +59,12 @@
 {{ footer() }}
 {% endblock %}
 
+{# i18n — единая точка подключения для всех страниц. Тексты пунктов навигации
+   (chrome.html) существуют только через data-i18n; если страницу забывали
+   подключить (как compare.html), сайдбар оставался пустым. Грузится ДО
+   блока scripts, чтобы дочерние страницы могли звать t() при инициализации. #}
+<script src="/static/js/i18n.js?v=16"></script>
+
 {% block scripts %}{% endblock %}
 
 {# Shared shell JS: fills #stages on pages that don't pass server context

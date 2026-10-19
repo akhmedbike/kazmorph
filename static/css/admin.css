@@ -28,23 +28,23 @@
     gap: 16px;
     margin-bottom: 28px;
 }
-.stat-card {
+.admin-wrap .stat-card {
     background: var(--card-bg, #fff);
     border: 1px solid var(--border, #e5e5e5);
     border-radius: 12px;
     padding: 20px;
     border-left: 4px solid var(--border, #e5e5e5);
 }
-.stat-card.stat-pending { border-left-color: var(--tag-afc, #d97706); }
-.stat-card.stat-approved { border-left-color: #16a34a; }
-.stat-card.stat-rejected { border-left-color: var(--tag-seg, #dc2626); }
-.stat-card.stat-edited { border-left-color: var(--primary, #ff385c); }
-.stat-value {
+.admin-wrap .stat-card.stat-pending { border-left-color: var(--tag-afc, #d97706); }
+.admin-wrap .stat-card.stat-approved { border-left-color: #16a34a; }
+.admin-wrap .stat-card.stat-rejected { border-left-color: var(--tag-seg, #dc2626); }
+.admin-wrap .stat-card.stat-edited { border-left-color: var(--primary, #ff385c); }
+.admin-wrap .stat-value {
     font-size: 2rem;
     font-weight: 700;
     line-height: 1;
 }
-.stat-label {
+.admin-wrap .stat-label {
     color: var(--text-muted, #666);
     font-size: 0.85rem;
     margin-top: 4px;
@@ -116,7 +116,7 @@
     color: #fff;
     border-color: var(--primary, #ff385c);
 }
-.meta-count {
+.admin-wrap .meta-count {
     color: var(--text-muted, #888);
     font-size: 0.85rem;
     margin-left: auto;
@@ -276,10 +276,10 @@
 .btn-approve:hover { background: #15803d; }
 .btn-reject { background: #dc2626; color: #fff; }
 .btn-reject:hover { background: #b91c1c; }
-.btn-edit { background: var(--card-bg, #fff); color: var(--text, #222); border-color: var(--border, #ddd); }
-.btn-edit:hover { background: #f3f4f6; }
-.btn-primary { background: var(--primary, #ff385c); color: #fff; }
-.btn-secondary { background: var(--card-bg, #fff); color: var(--text, #222); border-color: var(--border, #ddd); }
+.admin-wrap .btn-edit { background: var(--card-bg, #fff); color: var(--text, #222); border-color: var(--border, #ddd); }
+.admin-wrap .btn-edit:hover { background: #f3f4f6; }
+.admin-wrap .btn-primary { background: var(--primary, #ff385c); color: #fff; }
+.admin-wrap .btn-secondary { background: var(--card-bg, #fff); color: var(--text, #222); border-color: var(--border, #ddd); }
 
 .edit-form {
     display: flex;
@@ -592,7 +592,7 @@
     font-size: 0.95rem;
     padding: 6px 0;
 }
-.spinner {
+.admin-wrap .spinner {
     display: inline-block;
     width: 16px;
     height: 16px;
@@ -832,7 +832,7 @@ body.modal-open { overflow: hidden; }
 }
 
 /* ── Dark mode adjustments ──────────────────────────────────────────── */
-[data-theme="dark"] .stat-card,
+[data-theme="dark"] .admin-wrap .stat-card,
 [data-theme="dark"] .info-card,
 [data-theme="dark"] .review-card,
 [data-theme="dark"] .sources-panel,
@@ -861,8 +861,8 @@ body.modal-open { overflow: hidden; }
     background: var(--card-bg, #1f1f1f);
 }
 [data-theme="dark"] .filter-chip,
-[data-theme="dark"] .btn-edit,
-[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .admin-wrap .btn-edit,
+[data-theme="dark"] .admin-wrap .btn-secondary,
 [data-theme="dark"] .edit-input {
     background: var(--card-bg, #1f1f1f);
     color: var(--text, #eee);
