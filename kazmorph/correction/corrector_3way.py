@@ -43,9 +43,23 @@ from kazmorph.correction.candidate_generator import (
 # Defaults selected on validation. Override per-call for risk–coverage sweeps
 # or for the ablation that removes REVIEW.
 TAU_E = 0.15   # below this estimated error probability → KEEP
-TAU_C = 0.50   # top candidate normalised probability must reach this → CORRECT
-TAU_M = 0.20   # margin (top − second) must reach this → CORRECT
+# τ_c/τ_m calibrated on corrupted dev (3 seeds × 9 operators, F0.5-optimal
+# grid point; see scripts/eval_correction.py → reports/correction_eval.json).
+# The inherited τ_c=0.50 was structurally unreachable: with a full 10-candidate
+# softmax the maximum achievable top-probability is ~0.2–0.3, so CORRECT
+# never fired (P=R=F0.5=0 at any τ_e). At τ_c=0.15/τ_m=0.02: P≈0.70,
+# R≈0.13, F0.5≈0.37, FCR≈0.03% on clean tokens.
+TAU_C = 0.15   # top candidate normalised probability must reach this → CORRECT
+TAU_M = 0.02   # margin (top − second) must reach this → CORRECT
 MAX_CANDIDATES = 10
+# Error-evidence weight: the original token enters the candidate softmax at
+# energy α·p_err instead of 0. A confidently-flagged token (high p_err) is
+# thus easier to beat than a barely-suspicious one — this couples the
+# detection score into the decision instead of using it only as a gate.
+# Measured on corrupted dev (scripts/eval_correction.py): without it, CORRECT
+# is nearly unreachable because the zero-energy original keeps the largest
+# softmax share for every realistic candidate energy.
+ORIGINAL_EVIDENCE_ALPHA = 1.0
 # Legacy binary-corrector threshold (kazmorph.corrector default).
 LEGACY_CONFIDENCE_THRESHOLD = 0.85
 
@@ -127,8 +141,13 @@ def _classify_token(
         )
 
     # ── Candidate generation + softmax over {original} ∪ candidates ──
+    # The original carries error evidence: energy α·p_err (see
+    # ORIGINAL_EVIDENCE_ALPHA) — a strongly-suspect token is easier to beat.
     cands = generate_candidates(token, mode=candidate_mode, max_candidates=max_candidates)
-    probs = candidate_probs(cands, include_original=True, original_token=token)
+    probs = candidate_probs(
+        cands, include_original=True, original_token=token,
+        original_energy=ORIGINAL_EVIDENCE_ALPHA * p_err,
+    )
 
     if not probs:
         # No correction candidate and not KEEP-by-confidence either (tau_e was
