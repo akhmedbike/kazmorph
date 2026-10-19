@@ -128,7 +128,10 @@ def _op_insertion(token: str, rng: random.Random) -> str | None:
         nbrs = keyboard_neighbours(token[i - 1])
     else:
         nbrs = keyboard_neighbours(token[0]) if token else []
-    pool = nbrs if nbrs else list(KAZAKH_VOWELS)
+    # sorted(): KAZAKH_VOWELS is a frozenset — its iteration order depends on
+    # string hashes (PYTHONHASHSEED), making corruption output vary across
+    # processes. A fixed order makes corrupt_fold byte-reproducible per seed.
+    pool = nbrs if nbrs else sorted(KAZAKH_VOWELS)
     ch = rng.choice(pool)
     return token[:i] + ch + token[i:]
 
@@ -139,7 +142,7 @@ def _op_substitution(token: str, rng: random.Random) -> str | None:
         return None
     i = rng.randrange(len(token))
     nbrs = keyboard_neighbours(token[i])
-    pool = nbrs if nbrs else list(KAZAKH_VOWELS)
+    pool = nbrs if nbrs else sorted(KAZAKH_VOWELS)  # hash-seed-independent order
     # Avoid no-op substitutions.
     pool = [c for c in pool if c != token[i].lower()]
     if not pool:
@@ -264,6 +267,9 @@ def _op_affix_substitution(token: str, rng: random.Random, rma: ReverseMorphAnal
     # Nominal inflectional categories eligible for cross-category swap.
     nominal_cats = {"PL", "GEN", "DAT", "ACC", "ABL", "LOC", "INST",
                     "POSS.1SG", "POSS.1PL", "POSS.2SG", "POSS.2PL", "POSS.3"}
+    # tuple, not set: set iteration order depends on string hashes
+    # (PYTHONHASHSEED), which made corrupt_fold output vary across processes.
+    nominal_cats = tuple(sorted(nominal_cats))
     if category not in nominal_cats:
         return None
     other_cats = [c for c in nominal_cats if c != category and c in _BY_CATEGORY]
