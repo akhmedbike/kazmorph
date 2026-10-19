@@ -52,8 +52,9 @@ from kazmorph.correction.candidate_generator import (        # noqa: E402
     generate_candidates, candidate_probs,
 )
 from kazmorph.correction.corrector_3way import (        # noqa: E402
-    TAU_E, TAU_C, TAU_M, ORIGINAL_EVIDENCE_ALPHA,
+    TAU_E, TAU_C, TAU_M, ORIGINAL_EVIDENCE_ALPHA, DECISION_ENERGY_SCALE,
 )
+from kazmorph.correction.error_detector import estimate_p_err  # noqa: E402
 from kazmorph.pipeline import Pipeline                       # noqa: E402
 
 MODES = ["dl", "dl_freq", "dl_fst_filter", "dl_freq_morph"]
@@ -61,6 +62,7 @@ DEFAULT_SEEDS = [11, 22, 33]
 GRID_TAU_E = [TAU_E, 0.25, 0.40]   # detection gate: flagged share grows with τ_e
 GRID_TAU_C = [0.10, 0.15, 0.20, 0.30]
 GRID_TAU_M = [0.00, 0.02, 0.05, 0.10]
+GRID_SCALE = [1.0, 2.0, 4.0, 8.0]  # decision temperature (energy scaling)
 
 
 def build_pipeline(fast: bool) -> Pipeline:
@@ -72,19 +74,25 @@ def build_pipeline(fast: bool) -> Pipeline:
     return Pipeline(crf_model_path=crf, neural_model_path="models/neural_pos", lemma_model_path=lemma)
 
 
-def decide(profile: dict, tau_e: float, tau_c: float, tau_m: float) -> tuple[str, str]:
+def decide(profile: dict, tau_e: float, tau_c: float, tau_m: float,
+           energy_scale: float = 1.0) -> tuple[str, str]:
     """Faithful re-implementation of corrector_3way._classify_token over a
-    cached per-token profile {token, pos, confidence, probs}. Keeps candidate
-    generation outside the threshold sweep (RawProfile pattern)."""
+    cached per-token profile {token, pos, confidence, p_err, cands}. The
+    softmax is recomputed per call so the energy scale is sweepable."""
     token = profile["token"]
     pos = profile.get("pos", "UNK")
-    p_err = 1.0 - float(profile.get("confidence", 0.0))
+    p_err = profile["p_err"]
     if p_err < tau_e or pos in ("PUNCT", "NUM", "SYM") or len(token) < 2:
         return "KEEP", token
-    probs = profile["probs"]  # [(word, p)] incl. original, sorted desc
-    if not probs:
+    cands = profile["cands"]
+    if not cands:
         # Gate crossed but nothing retrieved: suspicious with no options.
         return "REVIEW", token
+    probs = candidate_probs(
+        cands, include_original=True, original_token=token,
+        original_energy=ORIGINAL_EVIDENCE_ALPHA * p_err,
+        energy_scale=energy_scale,
+    )
     original_lower = token.lower()
     correction_probs = [(w, p) for (w, p) in probs if w.lower() != original_lower]
     if not correction_probs:
@@ -127,7 +135,7 @@ def evaluate(args) -> dict:
                 token = res["token"]
                 pos = res.get("pos", "UNK")
                 conf = float(res.get("confidence", 0.0))
-                p_err = 1.0 - conf
+                p_err = estimate_p_err(token, conf)
                 is_clean = i != cpos
                 # The real corrector consults candidates only after the τ_e
                 # gate; mirror that (also the main perf lever — candidate
@@ -142,10 +150,7 @@ def evaluate(args) -> dict:
                 for mode in MODES:
                     cands = generate_candidates(token, mode=mode) if need_cands else []
                     profile = {"token": token, "pos": pos, "confidence": conf,
-                               "probs": (candidate_probs(
-                                   cands, include_original=True, original_token=token,
-                                   original_energy=ORIGINAL_EVIDENCE_ALPHA * p_err)
-                                   if cands else [])}
+                               "p_err": p_err, "cands": cands}
                     # ── candidate reach (corrupted position only) ──
                     if i == cpos and gold is not None:
                         words = [w.lower() for w, _ in cands]
@@ -153,7 +158,8 @@ def evaluate(args) -> dict:
                         cand_ranks[mode].append(rank)
                         n_corrupted[mode] += 1
                     # ── three-way decision at default thresholds ──
-                    decision, predicted = decide(profile, TAU_E, TAU_C, TAU_M)
+                    decision, predicted = decide(profile, TAU_E, TAU_C, TAU_M,
+                                                  DECISION_ENERGY_SCALE)
                     if decision == "CORRECT":
                         if is_clean:
                             fp[mode] += 1; fc[mode] += 1
@@ -171,7 +177,10 @@ def evaluate(args) -> dict:
                     if is_clean:
                         n_clean[mode] += 1
                     probs_by_mode[mode] = profile
-                if cpos is not None and args.grid and need_cands:
+                if args.grid and need_cands:
+                    # Grid profiles include IDENTITY sentences too: false
+                    # corrections on clean sentences are part of precision.
+                    # (cpos None → every token counts as clean.)
                     for mode in ("dl_fst_filter", "dl_freq_morph"):
                         grid_profiles[mode].append(
                             {"i": i, "cpos": cpos, "gold": gold, **probs_by_mode[mode]})
@@ -206,29 +215,30 @@ def evaluate(args) -> dict:
         for mode, profiles in grid_profiles.items():
             best = None
             rows = []
-            for tau_e in GRID_TAU_E:
-                for tau_c in GRID_TAU_C:
-                    for tau_m in GRID_TAU_M:
-                        g_tp = g_fp = g_fn = g_fc = 0
-                        for pr in profiles:
-                            d, pred = decide(pr, tau_e, tau_c, tau_m)
-                            clean = pr["i"] != pr["cpos"]
-                            if d == "CORRECT":
-                                if clean:
-                                    g_fp += 1; g_fc += 1
-                                elif pred.lower() == pr["gold"]:
-                                    g_tp += 1
-                                else:
-                                    g_fp += 1; g_fn += 1
-                            elif not clean:
-                                g_fn += 1
-                        p, r, f05 = prf(g_tp, g_fp, g_fn)
-                        row = {"tau_e": tau_e, "tau_c": tau_c, "tau_m": tau_m,
-                               "precision": p, "recall": r, "f05": f05,
-                               "n_fc": g_fc}
-                        rows.append(row)
-                        if best is None or f05 > best["f05"]:
-                            best = row
+            for scale in GRID_SCALE:
+                for tau_e in GRID_TAU_E:
+                    for tau_c in GRID_TAU_C:
+                        for tau_m in GRID_TAU_M:
+                            g_tp = g_fp = g_fn = g_fc = 0
+                            for pr in profiles:
+                                d, pred = decide(pr, tau_e, tau_c, tau_m, scale)
+                                clean = pr["i"] != pr["cpos"]
+                                if d == "CORRECT":
+                                    if clean:
+                                        g_fp += 1; g_fc += 1
+                                    elif pred.lower() == pr["gold"]:
+                                        g_tp += 1
+                                    else:
+                                        g_fp += 1; g_fn += 1
+                                elif not clean:
+                                    g_fn += 1
+                            p, r, f05 = prf(g_tp, g_fp, g_fn)
+                            row = {"scale": scale, "tau_e": tau_e, "tau_c": tau_c,
+                                   "tau_m": tau_m, "precision": p, "recall": r,
+                                   "f05": f05, "n_fc": g_fc}
+                            rows.append(row)
+                            if best is None or f05 > best["f05"]:
+                                best = row
             grid_json[mode] = {"best": best,
                                "rows": sorted(rows, key=lambda x: -x["f05"])[:5]}
 
@@ -273,7 +283,8 @@ def main() -> None:
               f"{m['recall']:6.3f} {m['f05']:6.3f} {fcr:>7} {m['review_rate']*100:5.1f}%")
     for mode, res in (report.get("grid_best") or {}).items():
         b = res["best"]
-        print(f"grid best {mode}: tau_e={b['tau_e']} tau_c={b['tau_c']} tau_m={b['tau_m']} "
+        print(f"grid best {mode}: scale={b['scale']} tau_e={b['tau_e']} "
+              f"tau_c={b['tau_c']} tau_m={b['tau_m']} "
               f"P={b['precision']} R={b['recall']} F05={b['f05']} fc={b['n_fc']}")
     print(f"n_corrupted/mode={report['modes']['dl']['n_corrupted']}, "
           f"skipped={report['meta']['skipped_tokenization']}, "

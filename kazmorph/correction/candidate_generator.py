@@ -425,28 +425,34 @@ def candidate_probs(
     include_original: bool = True,
     original_token: str = "",
     original_energy: float = 0.0,
+    energy_scale: float = 1.0,
 ) -> list[tuple[str, float]]:
     """Normalised softmax probabilities over candidates.
 
-    P(c | X, i) = exp(-E(c)) / Σ exp(-E(c′)), with the original token added
-    to the decision set at ``original_energy`` (default 0.0 — the historic
-    unbiased KEEP) when ``include_original`` is set. Returns [(candidate,
-    probability)] sorted by descending probability.
+    P(c | X, i) = exp(-s·E(c)) / Σ exp(-s·E(c′)), with the original token
+    added to the decision set at ``original_energy`` (default 0.0 — the
+    historic unbiased KEEP) when ``include_original`` is set. Returns
+    [(candidate, probability)] sorted by descending probability.
+
+    ``energy_scale`` s > 1 sharpens the distribution (decision temperature
+    1/s): near-tied candidates stop splitting the mass, so the top candidate
+    can actually dominate and clear the τ_c/τ_m gate. With s = 1 and a full
+    10-candidate list the maximum achievable top probability is ~0.2–0.3,
+    which caps CORRECT recall regardless of detection quality (measured:
+    scripts/eval_correction.py).
 
     ``original_energy > 0`` lets the caller inject error evidence: the
     three-way corrector passes α·p_err, so a token the detector flags as
     likely-wrong (high p_err) must be beaten by a smaller correction energy
-    than a barely-suspicious one. Without it the original keeps the largest
-    softmax share almost unconditionally and CORRECT degenerates to
-    near-zero recall (measured: scripts/eval_correction.py).
+    than a barely-suspicious one.
     """
     items = list(candidates)
     if include_original and original_token:
         items = [(original_token, original_energy)] + items
     if not items:
         return []
-    # Softmax over -E. Subtract max for numerical stability.
-    neg_e = [-e for _, e in items]
+    # Softmax over -s·E. Subtract max for numerical stability.
+    neg_e = [-energy_scale * e for _, e in items]
     m = max(neg_e)
     exps = [math.exp(ne - m) for ne in neg_e]
     total = sum(exps)

@@ -38,19 +38,19 @@ from dataclasses import dataclass, field
 from kazmorph.correction.candidate_generator import (
     generate_candidates, candidate_probs,
 )
+from kazmorph.correction.error_detector import estimate_p_err
 
 # ── Decision thresholds (were ``config.*`` in the source project) ────────────
 # Defaults selected on validation. Override per-call for risk–coverage sweeps
 # or for the ablation that removes REVIEW.
 TAU_E = 0.15   # below this estimated error probability → KEEP
-# τ_c/τ_m calibrated on corrupted dev (3 seeds × 9 operators, F0.5-optimal
-# grid point; see scripts/eval_correction.py → reports/correction_eval.json).
-# The inherited τ_c=0.50 was structurally unreachable: with a full 10-candidate
-# softmax the maximum achievable top-probability is ~0.2–0.3, so CORRECT
-# never fired (P=R=F0.5=0 at any τ_e). At τ_c=0.15/τ_m=0.02: P≈0.70,
-# R≈0.13, F0.5≈0.37, FCR≈0.03% on clean tokens.
-TAU_C = 0.15   # top candidate normalised probability must reach this → CORRECT
-TAU_M = 0.02   # margin (top − second) must reach this → CORRECT
+# Operating point selected on the HONEST corrupted-dev grid (identity
+# sentences included in precision; 3 seeds × 9 operators; scripts/
+# eval_correction.py → reports/correction_eval.json): F0.5-optimal
+# scale=2.0 / τ_c=0.30 / τ_m=0.10 gives P≈0.66, R≈0.26, F0.5≈0.51 with the
+# surface error detector and the evidence-weighted original.
+TAU_C = 0.30   # top candidate normalised probability must reach this → CORRECT
+TAU_M = 0.10   # margin (top − second) must reach this → CORRECT
 MAX_CANDIDATES = 10
 # Error-evidence weight: the original token enters the candidate softmax at
 # energy α·p_err instead of 0. A confidently-flagged token (high p_err) is
@@ -60,6 +60,13 @@ MAX_CANDIDATES = 10
 # is nearly unreachable because the zero-energy original keeps the largest
 # softmax share for every realistic candidate energy.
 ORIGINAL_EVIDENCE_ALPHA = 1.0
+# Decision temperature: energies are scaled by this factor inside the
+# candidate softmax (s > 1 sharpens). With s = 1 and a full candidate list
+# the top probability tops out at ~0.2–0.3, capping CORRECT recall.
+# Calibrated together with τ_c/τ_m on corrupted dev (scripts/eval_correction.py);
+# the honest grid picked s = 2.0 (sharpens the softmax so the top candidate
+# can dominate near-tied alternatives and clear the τ_c/τ_m gate).
+DECISION_ENERGY_SCALE = 2.0
 # Legacy binary-corrector threshold (kazmorph.corrector default).
 LEGACY_CONFIDENCE_THRESHOLD = 0.85
 
@@ -118,7 +125,10 @@ def _classify_token(
     token = pipeline_result["token"]
     pos = pipeline_result.get("pos", "UNK")
     confidence = float(pipeline_result.get("confidence", 0.0))
-    p_err = 1.0 - confidence
+    # Surface-evidence detector (lexicon/form membership, κ, frequency, affix
+    # tail validity + the tagger confidence). Falls back to the legacy
+    # 1 − confidence when no fitted model is present — see error_detector.
+    p_err = estimate_p_err(token, confidence)
 
     # ── KEEP: low estimated error probability, regardless of candidates ──
     # This is the single most important guard against false correction: a
@@ -147,6 +157,7 @@ def _classify_token(
     probs = candidate_probs(
         cands, include_original=True, original_token=token,
         original_energy=ORIGINAL_EVIDENCE_ALPHA * p_err,
+        energy_scale=DECISION_ENERGY_SCALE,
     )
 
     if not probs:

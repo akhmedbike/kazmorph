@@ -1,0 +1,33 @@
+{
+  "model": "logistic_regression_v1",
+  "features": [
+    "in_lemma_vocab",
+    "in_form_index",
+    "log_freq",
+    "kappa",
+    "rma_unk",
+    "has_valid_split",
+    "pos_conf"
+  ],
+  "weights": {
+    "in_lemma_vocab": -1.2678905986302778,
+    "in_form_index": -3.863184831053533,
+    "log_freq": -9.406798174517434,
+    "kappa": -0.7273174221321062,
+    "rma_unk": 1.6864497421074323,
+    "has_valid_split": -1.056647555992532,
+    "pos_conf": -3.4927392136603777
+  },
+  "bias": 7.366358740684488,
+  "metrics": {
+    "val_auc": 0.9886,
+    "val_detection_recall_at_tau_e": 0.9864,
+    "val_clean_false_flag_at_tau_e": 0.0929,
+    "tau_e": 0.15,
+    "n_train": 3789,
+    "n_val": 948,
+    "passes": 2,
+    "clean_rate": 0.25,
+    "seed": 42
+  }
+}
