@@ -47,6 +47,45 @@ _ABBREVIATIONS: frozenset[str] = frozenset({
     "қ.", "ғ.", "т.", "ш.", "б.",
 })
 
+# Первый проход токенизации: точка ВСЕГДА отделяется от слова. Паттерн вынесен
+# на уровень модуля, чтобы корректор (kazmorph/corrector.py, api_v1.py) получал
+# ровно те же границы токенов, что и Pipeline._tokenize, — расхождение копий
+# регулярки приводило к потере хвоста текста и «уезжающим» точкам в /correct.
+_TOKEN_FIRST_PASS = re.compile(
+    r"\d+[.,]\d+%?"                                                    # decimal: 7,2 / 58,3%
+    r"|\d+-[а-яәөүғқңһұі]+"                                            # numeral+suffix: 3-ші, 100-ге
+    r"|[а-яәөүғқңһұіА-ЯӘӨҮҒҚҢҺҰІa-zA-Z]+-[а-яәөүғқңһұіА-ЯӘӨҮҒҚҢҺҰІa-zA-Z]+"  # hyphen: сондай-ақ
+    r"|[а-яәөүғқңһұіА-ЯӘӨҮҒҚҢҺҰІa-zA-Z]+"                              # plain word (NO period)
+    r"|\d+"                                                             # plain number
+    r"|[^\s]",                                                          # single non-space char
+)
+
+
+def token_spans(text: str) -> list[tuple[str, int, int]]:
+    """Разбить текст на токены, вернув (токен, начало, конец) в поверхностном
+    порядке. Единственный источник правил токенизации: Pipeline._tokenize
+    возвращает токены этой функции, а корректоры (corrector.correct, API
+    /correct3) используют её позиции для реконструкции строки — копий
+    регулярки в других модулях быть не должно.
+    """
+    raw = [(m.group(0), m.start(), m.end()) for m in _TOKEN_FIRST_PASS.finditer(text)]
+    spans: list[tuple[str, int, int]] = []
+    i = 0
+    while i < len(raw):
+        tok, start, end = raw[i]
+        # Второй проход: точка приклеивается назад только к известным
+        # сокращениям (млрд., ж.) или одиночным заглавным инициалам (А.).
+        if i + 1 < len(raw) and raw[i + 1][0] == ".":
+            combo = tok + "."
+            if (combo in _ABBREVIATIONS
+                    or (len(tok) == 1 and tok.isupper() and tok.isalpha())):
+                spans.append((combo, start, raw[i + 1][2]))
+                i += 2
+                continue
+        spans.append((tok, start, end))
+        i += 1
+    return spans
+
 # ── Routing / fusion parameters (paper, §"Threshold-Based Routing") ──────────
 # Base fusion weights for the linear combination c* = w_FST·c_FST + w_CRF·c_CRF
 # + w_NN·c_NN (eq. 5), chosen by grid search on the dev split.
@@ -366,42 +405,8 @@ class Pipeline:
         they are a UD-specific convention and should be separate words in
         production text.
         """
-        # Kazakh Cyrillic + Latin letter class (used in several patterns below)
-        KZ = r"а-яәөүғқңһұіА-ЯӘӨҮҒҚҢҺҰІa-zA-Z"
-        # First pass: split into tokens with period ALWAYS separated from
-        # words. The old `[KZ]+\.` pattern greedily matched any word ending
-        # in a period (келді., үлкен.), gluing the sentence-final period onto
-        # the last word and breaking POS/lemma on real user text. We now split
-        # period off by default and re-attach it only for genuine abbreviations.
-        tokens = re.findall(
-            r"\d+[.,]\d+%?"                        # decimal: 7,2 / 58,3%
-            r"|\d+-[а-яәөүғқңһұі]+"                # numeral+suffix: 3-ші, 100-ге
-            r"|[" + KZ + r"]+-[" + KZ + r"]+"        # hyphenated compound: сондай-ақ
-            r"|[" + KZ + r"]+"                       # plain word (NO trailing period)
-            r"|\d+"                                  # plain number
-            r"|[^\s]",                              # single non-space char (punct, .)
-            text,
-        )
-        # Second pass: re-attach a separated period to the preceding token when
-        # the combination is a known abbreviation (млрд., ж., млн., ...) OR a
-        # single uppercase initial (А., М. — a structural abbreviation, not a
-        # word). This is conservative: it only ever merges word+"." that the
-        # first pass split, never glues across the whitespace boundary, so
-        # "А. С." stays two tokens while "млрд." re-forms.
-        merged: list[str] = []
-        i = 0
-        while i < len(tokens):
-            tok = tokens[i]
-            if i + 1 < len(tokens) and tokens[i + 1] == ".":
-                combo = tok + "."
-                # Known abbreviation, or a single uppercase Cyrillic/Latin
-                # initial (А., М., A.). Real Kazakh words are never a single
-                # uppercase letter, so this is safe.
-                if (combo in _ABBREVIATIONS
-                        or (len(tok) == 1 and tok.isupper() and tok.isalpha())):
-                    merged.append(combo)
-                    i += 2  # consume word + period
-                    continue
-            merged.append(tok)
-            i += 1
-        return merged
+        # Делегирует module-level token_spans — двухпроходная схема: точка
+        # всегда отделена от слова, кроме известных сокращений (млрд., ж.)
+        # и одиночных заглавных инициалов (А.). Единственный источник правил
+        # токенизации — копий регулярки в других модулях быть не должно.
+        return [tok for tok, _, _ in token_spans(text)]

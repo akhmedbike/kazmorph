@@ -21,9 +21,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from kazmorph.corrector import correct, _TOKEN_RE
+from kazmorph.corrector import correct
 from kazmorph.evaluation import QualityReport, parse_conllu_string
-from kazmorph.pipeline import Pipeline
+from kazmorph.pipeline import Pipeline, token_spans
 from kazmorph.correction.corrector_3way import (
     correct_sentence_3way,
     TAU_E as _3W_TAU_E,
@@ -144,18 +144,20 @@ def correct_text_3way(
     # Реконструкция строки с сохранением пробелов/пунктуации (тот же подход,
     # что и в kazmorph.corrector.correct): между токенами переносим исходный
     # текст дословно, а сам токен заменяем только при decision == CORRECT.
-    matches = list(_TOKEN_RE.finditer(req.text))
+    # Границы — от общего токенизатора pipeline (копия регулярки здесь когда-то
+    # разошлась с Pipeline._tokenize и теряла хвост текста).
+    spans = token_spans(req.text)
     out_parts: list[str] = []
     last_end = 0
-    n = min(len(decisions), len(matches))
+    n = min(len(decisions), len(spans))
     n_keep = n_correct = n_review = 0
     decision_rows: list[dict] = []
 
     for i in range(n):
-        m = matches[i]
+        tok, start, end = spans[i]
         d = decisions[i]
-        out_parts.append(req.text[last_end:m.start()])
-        last_end = m.end()
+        out_parts.append(req.text[last_end:start])
+        last_end = end
 
         emitted = d.predicted  # == token на KEEP/REVIEW, кандидат на CORRECT
         out_parts.append(emitted)
@@ -168,7 +170,7 @@ def correct_text_3way(
             n_review += 1
 
         decision_rows.append({
-            "position": m.start(),
+            "position": start,
             "token": d.token,
             "predicted": emitted,
             "decision": d.decision,

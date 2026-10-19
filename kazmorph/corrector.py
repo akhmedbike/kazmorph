@@ -13,27 +13,7 @@
 
 from __future__ import annotations
 
-import re
-
-from kazmorph.pipeline import Pipeline
-
-# Регулярка токенизации, идентичная Pipeline._tokenize. Хранится копией
-# (а не импортируется), чтобы избежать циклического импорта corrector↔pipeline.
-# Если правила токенизации в Pipeline._tokenize меняются, эту копию надо
-# обновить синхронно — иначе позиции токенов в correct() разъедутся с
-# результатами pipeline.process(), и исправления попадут не на те слова.
-#
-# Сборка паттерна повторяет Pipeline._tokenize: десятичные числа, числительные
-# с суффиксом через дефис, дефисные композиты, аббревиатуры с точкой.
-_KZ = r"а-яәөүғқңһұіА-ЯӘӨҮҒҚҢҺҰІa-zA-Z"
-_TOKEN_RE = re.compile(
-    r"\d+[.,]\d+%?"
-    r"|\d+-[а-яәөүғқңһұі]+"
-    r"|[" + _KZ + r"]+-[" + _KZ + r"]+"
-    r"|[" + _KZ + r"]+\."
-    r"|[" + _KZ + r"\d]+"
-    r"|[^\s]"
-)
+from kazmorph.pipeline import Pipeline, token_spans
 
 
 def correct(
@@ -67,22 +47,24 @@ def correct(
         }
     """
     results = pipeline.process(text)
-    matches = list(_TOKEN_RE.finditer(text))
+    # Границы токенов берём у того же токенизатора, что работает внутри
+    # pipeline.process, — гарантия выравнивания results↔spans.
+    spans = token_spans(text)
 
     corrections: list[dict] = []
     out_parts: list[str] = []
     last_end = 0
     applied = 0
 
-    # results и matches выровнены по одной регулярке; берём минимум для безопасности
-    n = min(len(results), len(matches))
+    # results и spans выровнены одним токенизатором; берём минимум для безопасности
+    n = min(len(results), len(spans))
 
     for i in range(n):
         res = results[i]
-        m = matches[i]
+        tok, start, end = spans[i]
         # сохраняем текст между токенами (пробелы, знаки) без изменений
-        out_parts.append(text[last_end:m.start()])
-        last_end = m.end()
+        out_parts.append(text[last_end:start])
+        last_end = end
 
         original = res["token"]
         suggestions = res.get("suggestions") or []
@@ -96,7 +78,7 @@ def correct(
         if suggestion and suggestion != original:
             out_parts.append(suggestion)
             corrections.append({
-                "position": m.start(),
+                "position": start,
                 "token": original,
                 "suggestion": suggestion,
                 "confidence": res.get("confidence", 0.0),

@@ -64,3 +64,25 @@ class TestCorrector:
         r_high = correct(pipeline, "адам сөз", confidence_threshold=0.9)
         r_low = correct(pipeline, "адам сөз", confidence_threshold=0.1)
         assert r_high["stats"]["corrected"] >= r_low["stats"]["corrected"]
+
+    def test_multisentence_text_not_truncated(self, pipeline):
+        # Регрессия: копия регулярки токенизации в corrector.py когда-то
+        # расходилась с Pipeline._tokenize (склеивала «слово+точка»), из-за
+        # чего многословный текст терял хвост при выравнивании результатов
+        # пайплайна с матчами регулярки. Токенизация теперь общая
+        # (pipeline.token_spans), хвост обязан сохраняться.
+        text = "Мен бүгін мектепке бардым. Ол кітапты оқып жатыр. Қазақстан халқы бірлікті жақсы көреді."
+        result = correct(pipeline, text)
+        assert result["stats"]["tokens"] >= 16
+        # хвост обязан сохраняться независимо от того, были замены или нет
+        # (голый RMA-пайплайн может заменить часть слов — это отдельная
+        # особенность эвристической уверенности, а не баг реконструкции)
+        assert result["corrected"].rstrip().endswith("көреді.")
+        assert " ." not in result["corrected"]
+
+    def test_periods_stay_attached_to_preceding_word(self, pipeline):
+        # Регрессия той же рассинхронизации: точки не должны «отрываться»
+        # пробелом от предыдущего слова в исправленной строке.
+        text = "Бірінші сөйлем. Екінші сөйлем."
+        result = correct(pipeline, text)
+        assert " ." not in result["corrected"]
